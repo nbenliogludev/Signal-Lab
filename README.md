@@ -22,7 +22,7 @@ signal-lab/
   prisma/
     schema.prisma
     migrations/
-  ops/
+  infra/
     prometheus/
     grafana/
     loki/
