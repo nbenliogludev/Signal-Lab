@@ -29,6 +29,7 @@ const scenarioOptions: Array<{ value: RunScenarioInput['type']; label: string }>
   { value: 'validation_error', label: 'validation_error' },
   { value: 'system_error', label: 'system_error' },
   { value: 'slow_request', label: 'slow_request' },
+  { value: 'teapot', label: 'teapot 🫖' },
 ];
 
 export function Dashboard(): React.ReactElement {

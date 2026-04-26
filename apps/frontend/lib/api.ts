@@ -19,7 +19,8 @@ export type ScenarioType =
   | 'success'
   | 'validation_error'
   | 'system_error'
-  | 'slow_request';
+  | 'slow_request'
+  | 'teapot';
 
 export interface RunScenarioInput {
   type: ScenarioType;
