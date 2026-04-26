@@ -1,0 +1,62 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-signal_lab}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-signal_lab_password}
+      POSTGRES_DB: ${POSTGRES_DB:-signal_lab}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    image: node:20-alpine
+    restart: unless-stopped
+    working_dir: /workspace/apps/backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://signal_lab:signal_lab_password@postgres:5432/signal_lab?schema=public}
+      BACKEND_PORT: ${BACKEND_PORT:-3001}
+      PORT: ${BACKEND_PORT:-3001}
+      NODE_ENV: development
+    ports:
+      - "${BACKEND_PORT:-3001}:${BACKEND_PORT:-3001}"
+    volumes:
+      - .:/workspace
+      - root_node_modules:/workspace/node_modules
+      - backend_node_modules:/workspace/apps/backend/node_modules
+    command: sh -c "cd /workspace && npm install && npm run prisma:generate && npm run prisma:migrate:deploy && cd apps/backend && npm install && npm run start:dev"
+
+  frontend:
+    image: node:20-alpine
+    restart: unless-stopped
+    working_dir: /workspace/apps/frontend
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+      NEXT_TELEMETRY_DISABLED: "1"
+      NODE_ENV: development
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/workspace
+      - frontend_node_modules:/workspace/apps/frontend/node_modules
+      - frontend_next:/workspace/apps/frontend/.next
+    command: sh -c "npm install && npm run dev -- --hostname 0.0.0.0"
+
+volumes:
+  postgres_data:
+  root_node_modules:
+  backend_node_modules:
+  frontend_node_modules:
+  frontend_next:
