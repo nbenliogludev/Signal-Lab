@@ -35,3 +35,11 @@ export class ScenarioRunResponseDto {
     };
   }
 }
+
+export class TeapotResponseDto {
+  @ApiProperty({ example: 42 })
+  signal!: 42;
+
+  @ApiProperty({ example: "I'm a teapot" })
+  message!: "I'm a teapot";
+}

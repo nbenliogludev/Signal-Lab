@@ -1,15 +1,24 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+
+export const scenarioTypes = [
+  'success',
+  'validation_error',
+  'system_error',
+  'slow_request',
+  'teapot',
+] as const;
+
+export type ScenarioType = (typeof scenarioTypes)[number];
 
 export class CreateScenarioRunDto {
   @ApiProperty({
     example: 'success',
-    description: 'Scenario type. PRD 001 keeps this flexible; PRD 002 defines concrete types.',
+    enum: scenarioTypes,
+    description: 'Scenario type to execute.',
   })
-  @IsString()
-  @MinLength(1)
-  @MaxLength(80)
-  type!: string;
+  @IsIn(scenarioTypes)
+  type!: ScenarioType;
 
   @ApiPropertyOptional({ example: 'Smoke test from README' })
   @IsOptional()

@@ -27,6 +27,9 @@ services:
       DATABASE_URL: ${DATABASE_URL:-postgresql://signal_lab:signal_lab_password@postgres:5432/signal_lab?schema=public}
       BACKEND_PORT: ${BACKEND_PORT:-3001}
       PORT: ${BACKEND_PORT:-3001}
+      LOG_FILE_PATH: ${LOG_FILE_PATH:-/var/log/signal-lab/backend.log}
+      SENTRY_DSN: ${SENTRY_DSN:-https://examplePublicKey@o0.ingest.sentry.io/0}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-development}
       NODE_ENV: development
     ports:
       - "${BACKEND_PORT:-3001}:${BACKEND_PORT:-3001}"
@@ -34,6 +37,7 @@ services:
       - .:/workspace
       - root_node_modules:/workspace/node_modules
       - backend_node_modules:/workspace/apps/backend/node_modules
+      - backend_logs:/var/log/signal-lab
     command: sh -c "cd /workspace && npm install && npm run prisma:generate && npm run prisma:migrate:deploy && cd apps/backend && npm install && npm run start:dev"
 
   frontend:
@@ -54,9 +58,68 @@ services:
       - frontend_next:/workspace/apps/frontend/.next
     command: sh -c "npm install && npm run dev -- --hostname 0.0.0.0"
 
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./ops/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+
+  loki:
+    image: grafana/loki:3.3.2
+    restart: unless-stopped
+    user: "0:0"
+    ports:
+      - "3102:3100"
+    volumes:
+      - ./ops/loki/config.yaml:/etc/loki/config.yaml:ro
+      - loki_data:/loki
+    command: ["-config.file=/etc/loki/config.yaml"]
+
+  promtail:
+    image: grafana/promtail:3.3.2
+    restart: unless-stopped
+    depends_on:
+      - loki
+      - backend
+    volumes:
+      - ./ops/promtail/config.yaml:/etc/promtail/config.yaml:ro
+      - backend_logs:/var/log/signal-lab:ro
+      - promtail_data:/tmp
+    command: ["-config.file=/etc/promtail/config.yaml"]
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+      - loki
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "3100:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./ops/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./ops/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+
 volumes:
   postgres_data:
   root_node_modules:
   backend_node_modules:
+  backend_logs:
   frontend_node_modules:
   frontend_next:
+  prometheus_data:
+  loki_data:
+  promtail_data:
+  grafana_data:
