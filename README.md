@@ -2,7 +2,7 @@
 
 Signal Lab is a small fullstack observability playground. The UI runs scenario flows against a NestJS backend, persists every run in PostgreSQL through Prisma, and emits metrics, structured logs, and Sentry-ready exceptions.
 
-This branch implements PRD 002 only. Cursor rules, Cursor skills, hooks, commands, and orchestrator work are intentionally left for later PRDs.
+This branch implements PRD 002 and PRD 003 (Observability Demo and Cursor AI Layer). Orchestrator work is intentionally left for later PRDs.
 
 ## Stack
 
@@ -285,3 +285,44 @@ The default host port is `5432`, matching the PRD requirement. If your machine a
 ```bash
 POSTGRES_PORT=5433 docker compose up -d
 ```
+
+## Cursor AI Layer (PRD 003)
+
+This project has been transformed into a fully context-aware workspace for the Cursor AI Agent. The AI layer provides guardrails and automated workflows to maintain project standards.
+
+### 1. Rules (`.cursor/rules/*.mdc`)
+Rules are strictly enforced constraints loaded automatically by Cursor for all chats:
+- **`stack-constraints.mdc`**: Explicit lists of allowed (Next.js, Prisma, shadcn) and forbidden (Redux, TypeORM) libraries.
+- **`observability-conventions.mdc`**: Mandatory naming for Prometheus metrics, Loki log formats, and Sentry rules.
+- **`prisma-patterns.mdc`**: Restricts direct SQL and defines standard migration steps.
+- **`frontend-patterns.mdc`**: Enforces TanStack Query for server state and React Hook Form + Zod for validation.
+- **`error-handling.mdc`**: Enforces NestJS built-in exceptions and global filters, forbidding silent error swallowing.
+
+### 2. Custom Skills (`.cursor/skills/`)
+Reusable and highly specific "runbooks" for the AI to follow. These are used to contextually build out features without omitting requirements:
+- **`observability`**: A workflow for correctly scaffolding counters, histograms, and structured logs inside any endpoint.
+- **`nestjs-endpoint`**: A step-by-step path to successfully build an endpoint with DTOs, controllers, services, and pipes completely.
+- **`prisma-schema`**: The mandatory schema modification cycle (`change` -> `migrate dev` -> `generate` -> `verify`).
+
+### 3. Commands (`.cursor/commands/`)
+Slash-commands to instantly invoke specific system-level workflows:
+- **`/health-check`**: Validates the complete Docker Compose architecture, curling APIs and Prometheus endpoints.
+- **`/check-obs`**: A synthetic test to ensure logs and metrics correctly reach the aggregator.
+- **`/add-endpoint`**: Scaffolds a NestJS endpoint.
+- **`/run-prd`**: (Placeholder for the upcoming Orchestrator PRD 004).
+
+### 4. Hooks (`.cursor/hooks/`)
+Checklists intended to be run before or after particular workflows to catch common mistakes early:
+- **`after-new-endpoint`**: Confirms that Sentry and Prometheus were explicitly handled in newly added code.
+- **`after-prisma-schema-change`**: Verifies that a migration was correctly built and the client was regenerated.
+- **`before-commit`**: Checks staged files for hardcoded `.env` leaks, `console.log` leftovers, and blocking TODOs.
+
+### 5. Marketplace Skills (`.cursor/marketplace-skills.md`)
+Community-driven skills required for the core technologies in the project, intended to be added via Cursor UI Settings. Our index file explains why we chose each:
+- `nextjs-react-typescript`
+- `nextjs-app-router`
+- `shadcn-ui`
+- `nestjs-best-practices`
+- `prisma-orm`
+- `docker-best-practices`
+- `postgresql-table-design`
