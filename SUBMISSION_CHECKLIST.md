@@ -144,6 +144,7 @@ Marketplace skills are listed in `.cursor/settings.json`; detailed justification
 - **Scenario tests:** add backend integration tests for `success`, `validation_error`, `system_error`, `slow_request`, and timeout scenarios.
 - **CI checks:** add GitHub Actions for typecheck, lint, `docker compose config`, and basic health verification.
 - **Alert rules:** add Prometheus/Grafana alerts for high error rate, slow request spikes, and missing backend metrics.
+- **Cursor hook automation:** extend the current hook playbooks with real project-level checks for endpoint changes, Prisma schema changes, secrets, and submission readiness.
 
 ---
 
