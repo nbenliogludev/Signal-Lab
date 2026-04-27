@@ -285,7 +285,3 @@ curl -s http://localhost:3001/api/scenarios
 ```
 
 ---
-
-## Rubric
-
-Grading criteria for the take-home are in `RUBRIC.md` (application, observability, Cursor AI layer, orchestrator, documentation).
