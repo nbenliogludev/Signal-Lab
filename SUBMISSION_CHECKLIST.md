@@ -68,12 +68,12 @@ Files: `.cursor/skills/<name>/SKILL.md`.
 
 ### Commands
 
-| # | Command name | Purpose |
-|---|----------------|---------|
-| 1 | `/health-check` | Docker Compose status (services up), `GET /api/health`, basic stack smoke checks (see `.cursor/commands/health-check.md`) |
-| 2 | `/check-obs` | Metrics / logs / Sentry checklist for a given backend file or endpoint (see `.cursor/commands/check-obs.md`) |
-| 3 | `/add-endpoint` | Scaffold a new NestJS REST slice with observability per `nestjs-endpoint` skill (see `.cursor/commands/add-endpoint.md`) |
-| 4 | `/run-prd` | Run multi-phase PRD 004 orchestrator: `SKILL.md`, `context.json`, phases and report (see `.cursor/commands/run-prd.md`) |
+| # | Command | What it does |
+|---|---------|--------------|
+| 1 | `/health-check` | Checks Docker Compose status, backend health endpoint, and basic stack availability. |
+| 2 | `/check-obs` | Checks metrics, logs, Sentry, and observability wiring for a backend endpoint. |
+| 3 | `/add-endpoint` | Guides adding a new NestJS endpoint with the project’s observability conventions. |
+| 4 | `/run-prd` | Runs a task or PRD through the Signal Lab orchestrator with `context.json`, phases, review, and report. |
 
 Files: `.cursor/commands/<name>.md`.
 
