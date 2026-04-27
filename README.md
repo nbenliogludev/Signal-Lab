@@ -1,4 +1,4 @@
-# Signal Lab - PRD 002 Observability Demo
+# Signal Lab 
 
 Signal Lab is a small fullstack observability playground. The UI runs scenario flows against a NestJS backend, persists every run in PostgreSQL through Prisma, and emits metrics, structured logs, and Sentry-ready exceptions.
 
