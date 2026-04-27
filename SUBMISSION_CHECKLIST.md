@@ -145,10 +145,11 @@ Marketplace skills are listed in `.cursor/settings.json`; detailed justification
 
 ---
 
-## Defense prep questions
+## Defense Questions
 
-1. Why this decomposition of custom skills?
-2. Which tasks fit a small/fast model and why?
-3. Which marketplace skills did you enable in Cursor vs custom skills — and why?
-4. Which hooks reduce mistakes?
-5. How does the orchestrator save context vs one large prompt?
+1. Why this decomposition of skills?
+2. Which tasks are suitable for a small model and why?
+3. Which marketplace skills did you connect, which ones did you replace with custom skills, and why?
+4. Which hooks actually reduce mistakes in daily work?
+5. How does the orchestrator save context compared to one large prompt?
+`
