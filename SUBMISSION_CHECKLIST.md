@@ -99,13 +99,30 @@ Rules are stored in `.cursor/rules/*.mdc`.
 | 4 | `frontend-patterns.mdc` | Next.js App Router, TanStack Query, React Hook Form, shadcn/ui, and Tailwind patterns. |
 | 5 | `error-handling.mdc` | Backend exception handling and frontend error display. |
 
-### Marketplace skills
+### Marketplace Skills
 
-See `.cursor/marketplace-skills.md` — **documented / recommended**; the repo cannot prove what is installed in Cursor.
+Marketplace skills are documented in `.cursor/marketplace-skills.md`.
 
-**Custom-only coverage in repo:** `observability`, `nestjs-endpoint`, `prisma-schema`, `signal-lab-orchestrator`.
+Repository files cannot prove which Marketplace skills are installed in the local Cursor profile, so these are listed as recommended / enabled manually in Cursor.
 
----
+| # | Skill | Why it is useful |
+|---|-------|------------------|
+| 1 | Next.js / React / TypeScript | Frontend patterns, App Router structure, and component boundaries. |
+| 2 | shadcn/ui | Consistent UI components and form patterns. |
+| 3 | Tailwind CSS | Layout and styling conventions. |
+| 4 | NestJS best practices | Controllers, services, modules, DTOs, and DI patterns. |
+| 5 | Prisma ORM | Schema, migrations, generated client, and database access patterns. |
+| 6 | Docker / Docker Compose | Local stack, service configuration, and container workflows. |
+| 7 | PostgreSQL | Database modeling and PostgreSQL-specific behavior. |
+
+**Custom-only coverage in this repo:**
+
+| Area | Custom skill |
+|------|--------------|
+| Signal Lab metrics, logs, and Sentry workflow | `observability` |
+| NestJS endpoint slice with project observability services | `nestjs-endpoint` |
+| Prisma migration workflow and project rules | `prisma-schema` |
+| PRD 004 execution with `context.json`, phases, review, and resume | `signal-lab-orchestrator` |
 
 ## Orchestrator
 
