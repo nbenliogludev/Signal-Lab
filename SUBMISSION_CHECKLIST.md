@@ -77,15 +77,15 @@ Files: `.cursor/skills/<name>/SKILL.md`.
 
 Files: `.cursor/commands/<name>.md`.
 
-### Hooks / playbooks
+### Hooks / Playbooks
 
-`.cursor/hooks/*.md` — **manual** checklists. No `hooks.json` in repo; not auto-run by Cursor.
+`.cursor/hooks/*.md` contains manual checklists. There is no `hooks.json`, so these hooks are not auto-run by Cursor.
 
-| # | File | Purpose |
-|---|------|---------|
-| 1 | `after-new-endpoint.md` | Metrics / logs / Sentry / DTO after new routes |
-| 2 | `after-prisma-schema-change.md` | Migrate + generate after schema changes |
-| 3 | `before-commit.md` | Secrets, staged `.env`, `console.log`, blocking TODOs |
+| # | Hook playbook | What it helps prevent |
+|---|---------------|------------------------|
+| 1 | `after-new-endpoint.md` | Missing metrics, logs, Sentry handling, DTO updates, or Swagger docs after endpoint changes. |
+| 2 | `after-prisma-schema-change.md` | Missing migration, Prisma client regeneration, or backend updates after schema changes. |
+| 3 | `before-commit.md` | Committed secrets, staged `.env` files, debug logs, and unfinished TODOs before submission. |
 
 ### Rules
 
