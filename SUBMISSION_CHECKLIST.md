@@ -138,9 +138,10 @@ Marketplace skills are listed in `.cursor/settings.json`; detailed justification
 
 ## Not completed / first +4h priorities
 
-- **Marketplace:** installation cannot be verified from repo files alone.
-- **Hooks:** manual playbooks only; no automatic Cursor `hooks.json` hooks shipped.
-- **Sentry:** end-to-end verification needs a real local `SENTRY_DSN`.
+- **Grafana polish:** improve the dashboard with latency heatmaps, alert rules, and a seeded demo dataset for a richer first-run experience.
+- **Scenario tests:** add backend integration tests for `success`, `validation_error`, `system_error`, `slow_request`, and timeout scenarios.
+- **CI checks:** add GitHub Actions for typecheck, lint, `docker compose config`, and basic health verification.
+- **Alert rules:** add Prometheus/Grafana alerts for high error rate, slow request spikes, and missing backend metrics.
 
 ---
 
@@ -149,5 +150,5 @@ Marketplace skills are listed in `.cursor/settings.json`; detailed justification
 1. Why this decomposition of custom skills?
 2. Which tasks fit a small/fast model and why?
 3. Which marketplace skills did you enable in Cursor vs custom skills — and why?
-4. How do playbook files under `.cursor/hooks/` reduce mistakes if they do not auto-run?
+4. Which hooks reduce mistakes?
 5. How does the orchestrator save context vs one large prompt?
