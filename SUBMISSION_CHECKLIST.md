@@ -1,31 +1,31 @@
 # Signal Lab — Submission Checklist
 
-## Репозиторий
+## Repository
 
 | | |
 |---|---|
 | **URL** | `https://github.com/nbenliogludev/Signal-Lab.git` |
-| **Ветка** | `main` |
-| **Время** | ~9–10 ч |
+| **Branch** | `main` |
+| **Time (approx.)** | ~9–10 h |
 
 ---
 
-## Запуск
+## Runbook
 
 | | |
 |---|---|
-| **Старт** | `docker compose up -d` |
+| **Start** | `docker compose up -d` |
 | **Health** | `curl http://localhost:3001/api/health` |
-| **Стоп** | `docker compose down` |
+| **Stop** | `docker compose down` |
 
-**Предусловия:** Docker + Compose. Node 20+ — только вне контейнеров. Порт 5432 занят: `POSTGRES_PORT=5433 docker compose up -d` (см. README).
+**Prerequisites:** Docker + Compose. Node 20+ only if you run apps outside containers. If host port 5432 is busy: `POSTGRES_PORT=5433 docker compose up -d` (see README).
 
 ---
 
-## Стек — подтверждение использования
+## Stack — confirmation
 
-| Технология | Используется? | Где посмотреть |
-|-----------|:------------:|----------------|
+| Technology | In use? | Where to look |
+|-----------|:-------:|---------------|
 | Next.js (App Router) | ☑ | `apps/frontend/app/` |
 | shadcn/ui | ☑ | `apps/frontend/components/ui/` |
 | Tailwind CSS | ☑ | `apps/frontend/` |
@@ -36,12 +36,12 @@
 | Prisma | ☑ | `prisma/schema.prisma` |
 | Sentry | ☑ | `apps/backend/src/observability/sentry.service.ts` |
 | Prometheus | ☑ | `apps/backend/.../metrics.service.ts`, `infra/prometheus/` |
-| Grafana | ☑ | `infra/grafana/provisioning/`, хост **3100** |
-| Loki | ☑ | `infra/loki/`, хост **3102** |
+| Grafana | ☑ | `infra/grafana/provisioning/`, host **3100** |
+| Loki | ☑ | `infra/loki/`, host **3102** |
 
 ---
 
-## Observability Verification
+## Observability verification
 
 | Signal | How to reproduce | Where to check |
 |--------|------------------|----------------|
@@ -52,29 +52,29 @@
 
 ---
 
-## Cursor AI Layer
+## Cursor AI layer
 
-### Custom Skills
+### Custom skills
 
-| # | Skill name | Назначение |
-|---|------------|------------|
-| 1 | `observability` | Метрики, структурированные JSON-логи (Loki/Promtail) и Sentry для NestJS-путей и сервисов; опирается на `MetricsService`, `AppLoggerService`, `SentryService` с примерами в SKILL |
-| 2 | `nestjs-endpoint` | Новый endpoint-срез: module, controller, service, DTO, `ObservabilityModule`, Prisma — по шаблону и слоям как в `scenarios` |
-| 3 | `prisma-schema` | Изменения `schema.prisma`, цикл migrate / generate и проверки без небезопасного raw SQL по умолчанию |
-| 4 | `signal-lab-orchestrator` | 7-фазный pipeline PRD 004 с `context.json`, выбором fast/default, циклом review, ручными hook playbooks и resume |
+| # | Skill name | Purpose |
+|---|------------|---------|
+| 1 | `observability` | Prometheus metrics, structured JSON logs (Loki/Promtail), and Sentry for NestJS paths/services via `MetricsService`, `AppLoggerService`, `SentryService` (steps and examples in SKILL) |
+| 2 | `nestjs-endpoint` | New REST slice: module, controller, service, DTO, `ObservabilityModule`, Prisma — layered template matching `scenarios` |
+| 3 | `prisma-schema` | Safe `schema.prisma` edits, migrate / generate cycle; avoid ad-hoc raw SQL by default |
+| 4 | `signal-lab-orchestrator` | PRD 004 seven-phase pipeline: `context.json`, fast/default task models, review loop, manual hook playbooks, resume |
 
-Файлы: `.cursor/skills/<name>/SKILL.md`.
+Files: `.cursor/skills/<name>/SKILL.md`.
 
 ### Commands
 
-| # | Command name | Назначение |
-|---|--------------|------------|
-| 1 | `/health-check` | Проверка Docker Compose (сервисы «Up»), `GET /api/health` и базовых смоук-проверок стека (см. `.cursor/commands/health-check.md`) |
-| 2 | `/check-obs` | Чеклист метрик / логов / Sentry для конкретного backend-файла или эндпоинта (см. `.cursor/commands/check-obs.md`) |
-| 3 | `/add-endpoint` | Скаффолд нового NestJS REST-среза с observability по шаблону навыка `nestjs-endpoint` (см. `.cursor/commands/add-endpoint.md`) |
-| 4 | `/run-prd` | Запуск многофазного оркестратора PRD 004: `SKILL.md`, `context.json`, фазы и отчёт (см. `.cursor/commands/run-prd.md`) |
+| # | Command name | Purpose |
+|---|----------------|---------|
+| 1 | `/health-check` | Docker Compose status (services up), `GET /api/health`, basic stack smoke checks (see `.cursor/commands/health-check.md`) |
+| 2 | `/check-obs` | Metrics / logs / Sentry checklist for a given backend file or endpoint (see `.cursor/commands/check-obs.md`) |
+| 3 | `/add-endpoint` | Scaffold a new NestJS REST slice with observability per `nestjs-endpoint` skill (see `.cursor/commands/add-endpoint.md`) |
+| 4 | `/run-prd` | Run multi-phase PRD 004 orchestrator: `SKILL.md`, `context.json`, phases and report (see `.cursor/commands/run-prd.md`) |
 
-Файлы: `.cursor/commands/<name>.md`.
+Files: `.cursor/commands/<name>.md`.
 
 ### Hooks / playbooks
 
@@ -82,9 +82,9 @@
 
 | # | File | Purpose |
 |---|------|---------|
-| 1 | `after-new-endpoint.md` | Metrics / logs / Sentry / DTO after routes |
-| 2 | `after-prisma-schema-change.md` | Migrate + generate after schema |
-| 3 | `before-commit.md` | Secrets, `.env` on stage, `console.log`, TODOs |
+| 1 | `after-new-endpoint.md` | Metrics / logs / Sentry / DTO after new routes |
+| 2 | `after-prisma-schema-change.md` | Migrate + generate after schema changes |
+| 3 | `before-commit.md` | Secrets, staged `.env`, `console.log`, blocking TODOs |
 
 ### Rules
 
@@ -92,17 +92,17 @@
 
 | # | File | Scope |
 |---|------|--------|
-| 1 | `stack-constraints.mdc` | Allowed / forbidden libs |
+| 1 | `stack-constraints.mdc` | Allowed / forbidden libraries |
 | 2 | `observability-conventions.mdc` | Metrics, logs, Sentry |
 | 3 | `prisma-patterns.mdc` | Prisma usage |
 | 4 | `frontend-patterns.mdc` | TanStack Query, RHF, shadcn |
 | 5 | `error-handling.mdc` | Nest HTTP errors |
 
-### Marketplace Skills
+### Marketplace skills
 
-See `.cursor/marketplace-skills.md` — **documented / recommended**; repo cannot verify what is installed in Cursor.
+See `.cursor/marketplace-skills.md` — **documented / recommended**; the repo cannot prove what is installed in Cursor.
 
-**Custom in repo:** `observability`, `nestjs-endpoint`, `prisma-schema`, `signal-lab-orchestrator`.
+**Custom-only coverage in repo:** `observability`, `nestjs-endpoint`, `prisma-schema`, `signal-lab-orchestrator`.
 
 ---
 
@@ -119,7 +119,7 @@ See `.cursor/marketplace-skills.md` — **documented / recommended**; repo canno
 
 ---
 
-## Скриншоты / видео
+## Screenshots / video
 
 - [x] UI application — `docs/dashboard_ui.png`
 - [x] Grafana dashboard — `docs/grafana.png`
@@ -129,18 +129,18 @@ See `.cursor/marketplace-skills.md` — **documented / recommended**; repo canno
 
 ---
 
-## Что не успел и что сделал бы первым при +4 часах
+## Not completed / first +4h priorities
 
-- Marketplace: installation not verifiable from repo alone.
-- Hooks: manual playbooks only, not automatic Cursor hooks.
-- Sentry: needs real local `SENTRY_DSN` for end-to-end verification.
+- **Marketplace:** installation cannot be verified from repo files alone.
+- **Hooks:** manual playbooks only; no automatic Cursor `hooks.json` hooks shipped.
+- **Sentry:** end-to-end verification needs a real local `SENTRY_DSN`.
 
 ---
 
-## Вопросы для защиты (подготовься)
+## Defense prep questions
 
-1. Почему именно такая декомпозиция skills?
-2. Какие задачи подходят для малой модели и почему?
-3. Какие marketplace skills подключил в Cursor, а какие закрыты custom — и почему?
-4. Как playbook-файлы в `.cursor/hooks/` снижают ошибки, если они не авто-запускаются?
-5. Как orchestrator экономит контекст по сравнению с одним большим промптом?
+1. Why this decomposition of custom skills?
+2. Which tasks fit a small/fast model and why?
+3. Which marketplace skills did you enable in Cursor vs custom skills — and why?
+4. How do playbook files under `.cursor/hooks/` reduce mistakes if they do not auto-run?
+5. How does the orchestrator save context vs one large prompt?
