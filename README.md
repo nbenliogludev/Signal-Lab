@@ -1,287 +1,328 @@
-# Signal Lab
+# Signal Lab - PRD 002 Observability Demo
 
-**Signal Lab** is a small full-stack **observability playground**: a Next.js UI runs synthetic **scenario** flows against a NestJS API; each run is stored in PostgreSQL (Prisma) and produces **metrics**, **structured logs** (Loki via Promtail), and optional **Sentry** events. The repo also ships a **Cursor AI layer** (rules, skills, commands, hook playbooks, orchestrator) under `.cursor/`.
+Signal Lab is a small fullstack observability playground. The UI runs scenario flows against a NestJS backend, persists every run in PostgreSQL through Prisma, and emits metrics, structured logs, and Sentry-ready exceptions.
 
-For the original assignment brief, see `ASSIGNMENT.md`. Before submitting, fill `SUBMISSION_CHECKLIST.md`.
+This branch implements PRD 002 and PRD 003 (Observability Demo and Cursor AI Layer). Orchestrator work is intentionally left for later PRDs.
 
----
+## Stack
 
-## Quick start
+- Frontend: Next.js App Router, TypeScript, Tailwind CSS, shadcn/ui-style components, TanStack Query, React Hook Form
+- Backend: NestJS with strict TypeScript
+- Database: PostgreSQL 16 with Prisma
+- Observability: Prometheus, Grafana, Loki, Promtail, Sentry SDK
+- Infra: Docker Compose
+
+## Repository Layout
+
+```text
+signal-lab/
+  apps/
+    frontend/
+    backend/
+  prisma/
+    schema.prisma
+    migrations/
+  infra/
+    prometheus/
+    grafana/
+    loki/
+    promtail/
+  docker-compose.yml
+  .env.example
+  README.md
+```
+
+## Prerequisites
+
+- Docker
+- Docker Compose
+- Node.js 20+ only if running the apps outside Docker
+
+## Environment
+
+Docker Compose includes safe defaults. To customize values, copy the example file:
+
+```bash
+cp .env.example .env
+```
+
+Expected variables:
+
+```bash
+POSTGRES_PORT=5432
+POSTGRES_USER=signal_lab
+POSTGRES_PASSWORD=signal_lab_password
+POSTGRES_DB=signal_lab
+DATABASE_URL=postgresql://signal_lab:signal_lab_password@postgres:5432/signal_lab?schema=public
+BACKEND_PORT=3001
+NEXT_PUBLIC_API_URL=http://localhost:3001
+LOG_FILE_PATH=/var/log/signal-lab/backend.log
+SENTRY_DSN=https://examplePublicKey@o0.ingest.sentry.io/0
+SENTRY_ENVIRONMENT=development
+GRAFANA_ADMIN_USER=admin
+GRAFANA_ADMIN_PASSWORD=admin
+```
+
+The Sentry DSN in `.env.example` is a placeholder. Replace it with a real DSN to verify remote Sentry events.
+
+## Start
 
 From the repository root:
 
 ```bash
-cp .env.example .env
 docker compose up -d
 ```
 
-Wait until containers are healthy, then:
+This starts:
+
+- frontend at `http://localhost:3000`
+- backend at `http://localhost:3001`
+- PostgreSQL 16 at `localhost:5432`
+- Prometheus at `http://localhost:9090`
+- Grafana at `http://localhost:3100`
+- Loki at `http://localhost:3102`
+- Promtail for backend log shipping
+
+The backend container runs Prisma generate and migration deploy during startup.
+
+## Verify Backend
+
+Health:
 
 ```bash
-curl -s http://localhost:3001/api/health
+curl http://localhost:3001/api/health
 ```
 
-Expected JSON shape: `{"status":"ok","timestamp":"<ISO-8601>"}`.
-
-| What | URL |
-|------|-----|
-| UI | http://localhost:3000 |
-| API (Swagger) | http://localhost:3001/api/docs |
-
-Stop:
+Metrics:
 
 ```bash
-docker compose down
+curl http://localhost:3001/metrics
 ```
 
----
+Swagger:
 
-## Services
+- `http://localhost:3001/api/docs`
 
-Host ports match `docker-compose.yml` (defaults; override with `.env` where noted).
+## Scenario API Checks
 
-| Service | URL / host | Credentials | Purpose |
-|---------|------------|---------------|---------|
-| **frontend** | http://localhost:3000 | — | Next.js App Router UI |
-| **backend** | http://localhost:3001 | — | NestJS API + `GET /metrics` |
-| **postgres** | `localhost:${POSTGRES_PORT:-5432}` | user / password / DB from `.env.example` (`signal_lab` / `signal_lab_password` / `signal_lab`) | PostgreSQL 16 |
-| **prometheus** | http://localhost:9090 | — | Scrapes backend metrics (`signal-lab-backend` job) |
-| **grafana** | http://localhost:3100 | `GRAFANA_ADMIN_USER` / `GRAFANA_ADMIN_PASSWORD` (default **admin** / **admin**) | Dashboards + Explore (Prometheus + Loki) |
-| **loki** | http://localhost:3102 | — | Log store (HTTP API; Explore in Grafana is the usual check) |
-| **promtail** | *(no host port published)* | — | Tails backend log file volume, pushes to Loki |
+Success:
 
-**Sentry** is not a Compose service: the backend sends events to your Sentry project when `SENTRY_DSN` is a real DSN (the value in `.env.example` is a placeholder).
-
----
-
-## Architecture
-
-```mermaid
-flowchart LR
-  subgraph ui
-    FE[Next.js UI :3000]
-  end
-  subgraph api
-    BE[NestJS API :3001]
-  end
-  subgraph data
-    PG[(PostgreSQL)]
-  end
-  subgraph observability
-    PR[Prometheus :9090]
-    LO[Loki :3102]
-    PT[Promtail]
-    GR[Grafana :3100]
-  end
-  subgraph external
-    SE[Sentry SaaS]
-  end
-  FE -->|REST /api| BE
-  BE --> PG
-  BE -->|GET /metrics| PR
-  BE -->|JSON log file| PT
-  PT --> LO
-  PR --> GR
-  LO --> GR
-  BE -.->|optional DSN| SE
+```bash
+curl -X POST http://localhost:3001/api/scenarios/run \
+  -H "Content-Type: application/json" \
+  -d '{"type":"success","name":"README success"}'
 ```
 
----
+Validation error:
 
-## Scenario runner
+```bash
+curl -i -X POST http://localhost:3001/api/scenarios/run \
+  -H "Content-Type: application/json" \
+  -d '{"type":"validation_error","name":"README validation"}'
+```
 
-API: `POST /api/scenarios/run` with JSON `{ "type": "<type>", "name": "<optional>" }` (see `CreateScenarioRunDto` in `apps/backend/src/scenarios/dto/create-scenario-run.dto.ts`). List recent runs: `GET /api/scenarios`.
+System error:
 
-| Scenario | HTTP | What happens | Expected signals |
-|----------|------|--------------|------------------|
-| `success` | **200** | Run saved as completed | Info log; `scenario_runs_total` with `status` **completed**; duration histogram |
-| `validation_error` | **400** | Run saved, then `BadRequestException` | Warn log; metric with `status` **error**; Sentry **breadcrumb** (not an error event by default) |
-| `system_error` | **500** | Run saved, synthetic error thrown | Error log; metric **error**; **Sentry exception** (if DSN enabled and not placeholder) |
-| `slow_request` | **200** | Random delay **2–5 s**, then saved as slow | Warn log; metrics for completed path after delay |
-| `database_timeout` | **504** | PostgreSQL `statement_timeout` + `pg_sleep` forces cancel; run saved as **timeout** | Error log; metric `status` **timeout**; **Sentry exception** (if DSN enabled) |
-| `external_api_timeout` | **504** | Outbound `fetch` to **`SCENARIO_EXTERNAL_API_URL`** (default `https://httpbin.org/delay/3`) with **~120 ms** client abort; run saved as **external_timeout** | Error log; metric `status` **external_timeout**; **Sentry** (if DSN enabled); requires outbound network from backend unless URL overridden |
-| `cache_miss_spike` | **200** | In-process synthetic cache: many **cold keys** in one request; run saved as **cache_miss_spike** | Warn log; metric `status` **cache_miss_spike**; Sentry **breadcrumb** (not an error event) |
-| `teapot` | **418** | Run saved with teapot metadata; body includes `signal: 42` | Info log; metric label `status` **teapot** (bonus / easter-egg path per PRD 002 F4) |
+```bash
+curl -i -X POST http://localhost:3001/api/scenarios/run \
+  -H "Content-Type: application/json" \
+  -d '{"type":"system_error","name":"README system"}'
+```
 
----
+Slow request:
 
-## Verification walkthrough (~5 minutes)
+```bash
+curl -X POST http://localhost:3001/api/scenarios/run \
+  -H "Content-Type: application/json" \
+  -d '{"type":"slow_request","name":"README slow"}'
+```
 
-1. **Stack** — `docker compose up -d` (use `POSTGRES_PORT=5433` if host `5432` is already in use).
-2. **UI** — Open http://localhost:3000 .
-3. **Success** — Run scenario `success`; confirm a **completed** entry in run history.
-4. **System error** — Run `system_error`; confirm error feedback in UI and an **error** (or equivalent) row in history.
-5. **Metrics** — `curl -s http://localhost:3001/metrics | grep scenario_runs_total` (counter lines appear after runs).
-6. **Grafana** — Log in at http://localhost:3100 (`admin` / `admin` by default). Open **Signal Lab Observability**:  
-   http://localhost:3100/d/signal-lab-observability/signal-lab-observability
-7. **Loki** — Grafana → **Explore** → Loki → query `{app="signal-lab"}` (run at least one scenario first).
-8. **Sentry** — Only if you replaced `SENTRY_DSN` with a real project DSN: repeat `system_error`, `database_timeout`, or `external_api_timeout` and confirm the event in Sentry.
-9. **Teapot** (optional) — `curl -i -X POST http://localhost:3001/api/scenarios/run -H "Content-Type: application/json" -d '{"type":"teapot"}'` → expect **418** and JSON containing `"signal":42`.
-10. **Database timeout** (optional) — `curl -i -X POST http://localhost:3001/api/scenarios/run -H "Content-Type: application/json" -d '{"type":"database_timeout"}'` → expect **504** and a history row with status **timeout**.
-11. **External API timeout** (optional, needs outbound HTTP from backend) — same curl with `'{"type":"external_api_timeout"}'` → expect **504** and history status **external_timeout** (override URL via `SCENARIO_EXTERNAL_API_URL` in `.env` / Compose).
-12. **Cache miss spike** (optional) — `'{"type":"cache_miss_spike"}'` → **200** and history status **cache_miss_spike**; check Loki for the warn line and `scenario_runs_total` label.
+Bonus teapot:
 
----
+```bash
+curl -i -X POST http://localhost:3001/api/scenarios/run \
+  -H "Content-Type: application/json" \
+  -d '{"type":"teapot","name":"README teapot"}'
+```
+
+Recent runs:
+
+```bash
+curl http://localhost:3001/api/scenarios
+```
+
+## Frontend
+
+Open:
+
+- `http://localhost:3000`
+
+The UI includes:
+
+- backend health card
+- scenario runner with Select, Input, Button, RHF, TanStack Query mutation, loading state, and toast feedback
+- run history with auto-refresh and colored badges
+- observability links for Grafana, Prometheus metrics, Loki, and Sentry
 
 ## Observability
 
-| Signal | How to reproduce | Where to check | Expected |
-|--------|-------------------|----------------|----------|
-| **Metrics** | Run any scenario | `curl -s http://localhost:3001/metrics` and/or Grafana dashboard | `scenario_runs_total`, `scenario_run_duration_seconds`, `http_requests_total` |
-| **Prometheus scrape** | Stack up | http://localhost:9090/targets | Job `signal-lab-backend` **UP** |
-| **Logs** | Run scenarios | Grafana Explore → Loki `{app="signal-lab"}` | JSON lines with `scenarioType`, `scenarioId`, etc. |
-| **Sentry** | Real DSN + `system_error` | Sentry project | Captured exception |
-| **Dashboard** | After traffic | Grafana dashboard URL above | Panels reflect runs / latency / errors |
+Prometheus metrics:
 
----
+- `http://localhost:3001/metrics`
+- `http://localhost:9090`
 
-## Cursor AI layer
+Expected metric names:
 
-Rules live in `.cursor/rules/*.mdc` (Cursor loads them as project rules). Skills, commands, and hook **playbooks** live under `.cursor/`; hook files are **manual checklists** — this repo does **not** ship `hooks.json` for automatic Cursor hooks.
+- `scenario_runs_total`
+- `scenario_run_duration_seconds`
+- `http_requests_total`
 
-### Rules
+Grafana:
 
-| File | Scope |
-|------|--------|
-| `stack-constraints.mdc` | Allowed / forbidden libraries (frontend + backend) |
-| `observability-conventions.mdc` | Metric names, log shape, Sentry usage |
-| `prisma-patterns.mdc` | Prisma usage; no ad-hoc raw SQL |
-| `frontend-patterns.mdc` | TanStack Query, RHF + Zod, shadcn-style UI |
-| `error-handling.mdc` | NestJS HTTP errors, no silent swallowing |
+- `http://localhost:3100`
+- default login: `admin` / `admin`
+- dashboard: `http://localhost:3100/d/signal-lab-observability/signal-lab-observability`
 
-### Custom skills (`SKILL.md` in each folder)
-
-| Folder | Use when |
-|--------|----------|
-| `observability` | Wiring `MetricsService`, `AppLoggerService`, `SentryService` |
-| `nestjs-endpoint` | New Nest feature module aligned with `scenarios` |
-| `prisma-schema` | Editing `prisma/schema.prisma` and migration flow |
-| `signal-lab-orchestrator` | PRD-style multi-phase runs (see **Orchestrator** below) |
-
-### Commands (`.cursor/commands/`)
-
-| Command | Role |
-|---------|------|
-| `/health-check` | Compose health + smoke checks |
-| `/check-obs` | Observability checklist for a service file or route |
-| `/add-endpoint` | Scaffold Nest endpoint using repo observability pattern |
-| `/run-prd` | Drive orchestrator skill + `context.json` contract |
-
-### Hook playbooks (`.cursor/hooks/`)
-
-| File | Prevents |
-|------|----------|
-| `after-new-endpoint.md` | Missing metrics / logs / Sentry / DTO validation after new routes |
-| `after-prisma-schema-change.md` | Schema edits without migrate + generate + compile |
-| `before-commit.md` | Secrets in git, staging `.env`, stray `console.log`, blocking TODOs |
-
-### Marketplace skills
-
-**Documented / recommended** third-party skills are listed in `.cursor/marketplace-skills.md`. The repository **does not** include vendored marketplace rule files and **cannot** prove which skills are enabled in your Cursor app — treat them as optional; project `.mdc` rules remain authoritative.
-
-### Orchestrator (PRD 004)
-
-| Item | Detail |
-|------|--------|
-| **Skill path** | `.cursor/skills/signal-lab-orchestrator/SKILL.md` (subagent templates: `COORDINATION.md`, examples: `EXAMPLE.md`) |
-| **Slash command** | `/run-prd` — see `.cursor/commands/run-prd.md` |
-| **State file** | `.execution/{executionId}/context.json` (= PRD F1 `.execution/<timestamp>/` with the same folder name) |
-| **Phases (7)** | `analysis` → `codebase` → `planning` → `decomposition` → `implementation` → `review` → `report` |
-| **Tasks (F4)** | Each task **5–10 min**, **`description`** 1–3 sentences, **`suggestedSkill`** tied to repo skills; **no** single mega-task spanning backend + frontend + docs |
-| **Models** | `tasks[].model`: **`fast`** for mechanical work; **`default`** for architecture, multi-system, tricky observability/error semantics (PRD F3 — intent: small models do most tasks, not a fixed ratio) |
-| **Review / retry** | Read-only reviewer; up to **3** retries per task; **hook playbooks** (`.cursor/hooks/*.md`) applied **manually** in review; **pass / fail / skipped** in `report.md` when relevant; failed tasks stay visible and do not block unrelated tasks (PRD F6–F7) |
-| **Resume** | Same `executionId` folder: read `context.json` first; if `status` is `in_progress`, continue from `currentPhase` / next pending task; **do not** redo completed phases; **failed** tasks remain in JSON and final report |
-| **Git** | Orchestrator docs: no force push / hard reset / branch delete; branch/commit only if **you** ask for git workflow |
-| **Hooks** | **Playbooks** under `.cursor/hooks/*.md` (manual); not auto-run unless you add real Cursor hook config |
-
-### Example orchestrator execution
-
-The orchestrator was exercised with a short `/run-prd` prompt to add an extra `cache_miss_spike` scenario. It supports **guided** multi-step work in Cursor (PRD 004 phases, persisted state); it is **not** full autonomous development.
-
-| Item | Value |
-|------|--------|
-| Prompt | `/run-prd Add a new Signal Lab scenario: cache_miss_spike. Use the orchestrator skill and existing repo rules/skills.` |
-| Context | `.execution/2026-04-27-02-01/context.json` |
-| Report | `.execution/2026-04-27-02-01/report.md` |
-| Result | `cache_miss_spike` added as an extra scenario through that run |
-
-That execution shows Signal Lab PRD 004 behavior: seven phases, atomic task decomposition, **fast** / **default** model hints on tasks, skill mapping, **manual** hook playbook review (recorded in the report — playbooks do not auto-run), a final report, and resume-friendly state in `context.json`.
-
----
-
-## Project structure
+Loki logs in Grafana Explore:
 
 ```text
-signal-lab/
-├── apps/
-│   ├── frontend/          # Next.js App Router
-│   └── backend/           # NestJS API
-├── prisma/
-│   ├── schema.prisma
-│   └── migrations/
-├── infra/                 # prometheus, grafana, loki, promtail
-├── prds/                  # Product requirement docs
-├── .cursor/               # Rules, skills, commands, hook playbooks
-├── docker-compose.yml
-├── .env.example
-├── ASSIGNMENT.md
-├── SUBMISSION_CHECKLIST.md
-└── README.md
+{app="signal-lab"}
 ```
 
----
+Useful filtered query:
 
-## Troubleshooting
+```text
+{app="signal-lab", scenarioType="system_error"}
+```
 
-| Symptom | What to try |
-|---------|-------------|
-| Container errors | `docker compose logs <service>` — e.g. `backend`, `frontend`, `postgres`, `prometheus`, `grafana`, `loki`, `promtail` |
-| Port **5432** busy | `POSTGRES_PORT=5433 docker compose up -d` (keep `DATABASE_URL` pointing at `postgres:5432` inside Compose unless you know you changed it) |
-| Stale DB / volumes | `docker compose down -v` then `docker compose up -d` (backend entrypoint runs `prisma migrate deploy` on startup) |
-| Types / client out of date (local dev) | From repo root: `npm run prisma:generate`; from `apps/backend`: `npm run prisma:generate` (see `apps/backend/package.json`) |
+Sentry:
 
----
+- Set `SENTRY_DSN` to a real project DSN.
+- Run `system_error`.
+- Check the configured Sentry project for the captured exception.
 
-## Stop / reset
+## Verification Walkthrough
+
+1. Start the stack:
+
+```bash
+docker compose up -d
+```
+
+2. Open `http://localhost:3000`.
+3. Run `success` and confirm a green `completed` badge in history.
+4. Run `system_error` and confirm an error toast plus a red `error` badge in history.
+5. Open `http://localhost:3001/metrics` and confirm `scenario_runs_total`.
+6. Open Grafana at `http://localhost:3100`.
+7. Open the Signal Lab dashboard and confirm runs, latency, and error panels.
+8. In Grafana Explore, select Loki and run `{app="signal-lab"}`.
+9. If a real Sentry DSN is configured, confirm the `system_error` event in Sentry.
+
+## Logs
+
+If something fails, inspect the relevant service logs:
+
+```bash
+docker compose logs backend
+docker compose logs frontend
+docker compose logs postgres
+docker compose logs prometheus
+docker compose logs grafana
+docker compose logs loki
+docker compose logs promtail
+```
+
+## Stop
 
 ```bash
 docker compose down
 ```
 
-Remove containers **and** named volumes (full data reset):
+Reset containers and volumes:
 
 ```bash
 docker compose down -v
 ```
 
----
+## Prisma
 
-## Local development (without Docker)
+The backend applies migrations automatically on container startup.
 
-Requires Node **20+** and a running PostgreSQL instance whose URL you put in `DATABASE_URL`.
-
-```bash
-cd apps/backend && npm install && npm run start:dev
-cd apps/frontend && npm install && npm run dev
-```
-
-Prisma schema path: `prisma/schema.prisma`. Root scripts: `npm run prisma:generate`, `npm run prisma:migrate:deploy`.
-
----
-
-## API quick reference
+If running locally outside Docker from `apps/backend`, use:
 
 ```bash
-# Health
-curl -s http://localhost:3001/api/health
-
-# Run scenario
-curl -s -X POST http://localhost:3001/api/scenarios/run \
-  -H "Content-Type: application/json" \
-  -d '{"type":"success","name":"smoke"}'
-
-# Recent runs
-curl -s http://localhost:3001/api/scenarios
+npm install
+npm run prisma:generate
+npm run prisma:migrate:deploy
 ```
 
----
+The Prisma schema lives at `prisma/schema.prisma`.
+
+## Local Development Outside Docker
+
+Backend:
+
+```bash
+cd apps/backend
+npm install
+npm run start:dev
+```
+
+Frontend:
+
+```bash
+cd apps/frontend
+npm install
+npm run dev
+```
+
+For local backend development outside Docker, point `DATABASE_URL` at a running PostgreSQL database.
+
+## If Port 5432 Is Busy
+
+The default host port is `5432`, matching the PRD requirement. If your machine already has PostgreSQL running, override only the host port:
+
+```bash
+POSTGRES_PORT=5433 docker compose up -d
+```
+
+## Cursor AI Layer (PRD 003)
+
+This project has been transformed into a fully context-aware workspace for the Cursor AI Agent. The AI layer provides guardrails and automated workflows to maintain project standards.
+
+### 1. Rules (`.cursor/rules/*.mdc`)
+Rules are strictly enforced constraints loaded automatically by Cursor for all chats:
+- **`stack-constraints.mdc`**: Explicit lists of allowed (Next.js, Prisma, shadcn) and forbidden (Redux, TypeORM) libraries.
+- **`observability-conventions.mdc`**: Mandatory naming for Prometheus metrics, Loki log formats, and Sentry rules.
+- **`prisma-patterns.mdc`**: Restricts direct SQL and defines standard migration steps.
+- **`frontend-patterns.mdc`**: Enforces TanStack Query for server state and React Hook Form + Zod for validation.
+- **`error-handling.mdc`**: Enforces NestJS built-in exceptions and global filters, forbidding silent error swallowing.
+
+### 2. Custom Skills (`.cursor/skills/`)
+Reusable and highly specific "runbooks" for the AI to follow. These are used to contextually build out features without omitting requirements:
+- **`observability`**: A workflow for correctly scaffolding counters, histograms, and structured logs inside any endpoint.
+- **`nestjs-endpoint`**: A step-by-step path to successfully build an endpoint with DTOs, controllers, services, and pipes completely.
+- **`prisma-schema`**: The mandatory schema modification cycle (`change` -> `migrate dev` -> `generate` -> `verify`).
+
+### 3. Commands (`.cursor/commands/`)
+Slash-commands to instantly invoke specific system-level workflows:
+- **`/health-check`**: Validates the complete Docker Compose architecture, curling APIs and Prometheus endpoints.
+- **`/check-obs`**: A synthetic test to ensure logs and metrics correctly reach the aggregator.
+- **`/add-endpoint`**: Scaffolds a NestJS endpoint.
+- **`/run-prd`**: (Placeholder for the upcoming Orchestrator PRD 004).
+
+### 4. Hooks (`.cursor/hooks/`)
+Checklists intended to be run before or after particular workflows to catch common mistakes early:
+- **`after-new-endpoint`**: Confirms that Sentry and Prometheus were explicitly handled in newly added code.
+- **`after-prisma-schema-change`**: Verifies that a migration was correctly built and the client was regenerated.
+- **`before-commit`**: Checks staged files for hardcoded `.env` leaks, `console.log` leftovers, and blocking TODOs.
+
+### 5. Marketplace Skills (`.cursor/marketplace-skills.md`)
+Community-driven skills required for the core technologies in the project, intended to be added via Cursor UI Settings. Our index file explains why we chose each:
+- `nextjs-react-typescript`
+- `nextjs-app-router`
+- `shadcn-ui`
+- `nestjs-best-practices`
+- `prisma-orm`
+- `docker-best-practices`
+- `postgresql-table-design`
