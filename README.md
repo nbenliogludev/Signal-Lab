@@ -83,6 +83,38 @@ This starts:
 
 The backend container runs Prisma generate and migration deploy during startup.
 
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph ui
+    FE[Next.js UI :3000]
+  end
+  subgraph api
+    BE[NestJS API :3001]
+  end
+  subgraph data
+    PG[(PostgreSQL)]
+  end
+  subgraph observability
+    PR[Prometheus :9090]
+    LO[Loki :3102]
+    PT[Promtail]
+    GR[Grafana :3100]
+  end
+  subgraph external
+    SE[Sentry SaaS]
+  end
+  FE -->|REST /api| BE
+  BE --> PG
+  BE -->|GET /metrics| PR
+  BE -->|JSON log file| PT
+  PT --> LO
+  PR --> GR
+  LO --> GR
+  BE -.->|optional DSN| SE
+```
+
 ## Verify Backend
 
 Health:
