@@ -58,10 +58,11 @@
 
 | # | Skill name | Purpose |
 |---|------------|---------|
-| 1 | `observability` | Prometheus metrics, structured JSON logs (Loki/Promtail), and Sentry for NestJS paths/services via `MetricsService`, `AppLoggerService`, `SentryService` (steps and examples in SKILL) |
-| 2 | `nestjs-endpoint` | New REST slice: module, controller, service, DTO, `ObservabilityModule`, Prisma — layered template matching `scenarios` |
-| 3 | `prisma-schema` | Safe `schema.prisma` edits, migrate / generate cycle; avoid ad-hoc raw SQL by default |
-| 4 | `signal-lab-orchestrator` | PRD 004 seven-phase pipeline: `context.json`, fast/default task models, review loop, manual hook playbooks, resume |
+| 1 | `observability` | Adds metrics, structured logs, and Sentry handling using the project’s `MetricsService`, `AppLoggerService`, and `SentryService`. |
+| 2 | `nestjs-endpoint` | Helps add or update NestJS endpoints following the existing controller/service/DTO pattern. |
+| 3 | `prisma-schema` | Guides safe Prisma schema changes, migrations, and client regeneration. |
+| 4 | `signal-lab-orchestrator` | Runs PRD work through a 7-phase flow with `context.json`, task decomposition, model selection, review, and resume support. |
+
 
 Files: `.cursor/skills/<name>/SKILL.md`.
 
