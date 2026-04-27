@@ -6,7 +6,7 @@
 |---|---|
 | **URL** | `https://github.com/nbenliogludev/Signal-Lab.git` |
 | **Branch** | `main` |
-| **Time (approx.)** | ~9–10 h |
+| **Time (approx.)** | ~9 h |
 
 ---
 
