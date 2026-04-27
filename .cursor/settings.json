@@ -1,0 +1,12 @@
+{
+  "skills": {
+    "marketplace": [
+      "next-best-practices",
+      "shadcn-ui",
+      "tailwind-design-system",
+      "nestjs-best-practices",
+      "prisma-orm",
+      "docker-expert"
+    ]
+  }
+}

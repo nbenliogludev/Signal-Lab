@@ -99,21 +99,13 @@ Rules are stored in `.cursor/rules/*.mdc`.
 | 4 | `frontend-patterns.mdc` | Next.js App Router, TanStack Query, React Hook Form, shadcn/ui, and Tailwind patterns. |
 | 5 | `error-handling.mdc` | Backend exception handling and frontend error display. |
 
-### Marketplace Skills
+### Marketplace skills
 
-Marketplace skills are documented in `.cursor/marketplace-skills.md`.
+Marketplace skills are listed in `.cursor/settings.json`; detailed justification is in `.cursor/marketplace-skills.md`.
 
-Repository files cannot prove which Marketplace skills are installed in the local Cursor profile, so these are listed as recommended / enabled manually in Cursor.
+The repo cannot prove every marketplace ID is installed in your Cursor profile — `.cursor/settings.json` is the workspace intent; confirm in Cursor UI.
 
-| # | Skill | Why it is useful |
-|---|-------|------------------|
-| 1 | Next.js / React / TypeScript | Frontend patterns, App Router structure, and component boundaries. |
-| 2 | shadcn/ui | Consistent UI components and form patterns. |
-| 3 | Tailwind CSS | Layout and styling conventions. |
-| 4 | NestJS best practices | Controllers, services, modules, DTOs, and DI patterns. |
-| 5 | Prisma ORM | Schema, migrations, generated client, and database access patterns. |
-| 6 | Docker / Docker Compose | Local stack, service configuration, and container workflows. |
-| 7 | PostgreSQL | Database modeling and PostgreSQL-specific behavior. |
+**Custom skills** cover Signal Lab–specific workflow (see **Custom skills** above).
 
 **Custom-only coverage in this repo:**
 
