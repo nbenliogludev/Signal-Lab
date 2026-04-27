@@ -194,6 +194,19 @@ Rules live in `.cursor/rules/*.mdc` (Cursor loads them as project rules). Skills
 | **Git** | Orchestrator docs: no force push / hard reset / branch delete; branch/commit only if **you** ask for git workflow |
 | **Hooks** | **Playbooks** under `.cursor/hooks/*.md` (manual); not auto-run unless you add real Cursor hook config |
 
+### Example orchestrator execution
+
+The orchestrator was exercised with a short `/run-prd` prompt to add an extra `cache_miss_spike` scenario. It supports **guided** multi-step work in Cursor (PRD 004 phases, persisted state); it is **not** full autonomous development.
+
+| Item | Value |
+|------|--------|
+| Prompt | `/run-prd Add a new Signal Lab scenario: cache_miss_spike. Use the orchestrator skill and existing repo rules/skills.` |
+| Context | `.execution/2026-04-27-02-01/context.json` |
+| Report | `.execution/2026-04-27-02-01/report.md` |
+| Result | `cache_miss_spike` added as an extra scenario through that run |
+
+That execution shows Signal Lab PRD 004 behavior: seven phases, atomic task decomposition, **fast** / **default** model hints on tasks, skill mapping, **manual** hook playbook review (recorded in the report — playbooks do not auto-run), a final report, and resume-friendly state in `context.json`.
+
 ---
 
 ## Project structure
