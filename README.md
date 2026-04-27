@@ -2,8 +2,6 @@
 
 Signal Lab is a small fullstack observability playground. The UI runs scenario flows against a NestJS backend, persists every run in PostgreSQL through Prisma, and emits metrics, structured logs, and Sentry-ready exceptions.
 
-This repo implements the observability demo (PRD 002), the Cursor AI layer (PRD 003), and the **PRD 004 orchestrator** (`signal-lab-orchestrator` skill + `/run-prd`).
-
 ## Stack
 
 - Frontend: Next.js App Router, TypeScript, Tailwind CSS, shadcn/ui-style components, TanStack Query, React Hook Form
