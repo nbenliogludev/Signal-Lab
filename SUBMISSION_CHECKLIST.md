@@ -56,14 +56,14 @@
 
 ### Custom Skills
 
-`.cursor/skills/<name>/SKILL.md`
+| # | Skill name | Назначение |
+|---|------------|------------|
+| 1 | `observability` | Метрики, структурированные JSON-логи (Loki/Promtail) и Sentry для NestJS-путей и сервисов; опирается на `MetricsService`, `AppLoggerService`, `SentryService` с примерами в SKILL |
+| 2 | `nestjs-endpoint` | Новый endpoint-срез: module, controller, service, DTO, `ObservabilityModule`, Prisma — по шаблону и слоям как в `scenarios` |
+| 3 | `prisma-schema` | Изменения `schema.prisma`, цикл migrate / generate и проверки без небезопасного raw SQL по умолчанию |
+| 4 | `signal-lab-orchestrator` | 7-фазный pipeline PRD 004 с `context.json`, выбором fast/default, циклом review, ручными hook playbooks и resume |
 
-| # | Skill | Role |
-|---|--------|------|
-| 1 | `observability` | Metrics, JSON logs, Sentry services |
-| 2 | `nestjs-endpoint` | Nest slice + observability like `scenarios` |
-| 3 | `prisma-schema` | `schema.prisma`, migrate / generate |
-| 4 | `signal-lab-orchestrator` | PRD 004 phases, `context.json`, resume |
+Файлы: `.cursor/skills/<name>/SKILL.md`.
 
 ### Commands
 
