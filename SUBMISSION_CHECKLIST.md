@@ -89,15 +89,15 @@ Files: `.cursor/commands/<name>.md`.
 
 ### Rules
 
-`.cursor/rules/*.mdc`
+Rules are stored in `.cursor/rules/*.mdc`.
 
-| # | File | Scope |
-|---|------|--------|
-| 1 | `stack-constraints.mdc` | Allowed / forbidden libraries |
-| 2 | `observability-conventions.mdc` | Metrics, logs, Sentry |
-| 3 | `prisma-patterns.mdc` | Prisma usage |
-| 4 | `frontend-patterns.mdc` | TanStack Query, RHF, shadcn |
-| 5 | `error-handling.mdc` | Nest HTTP errors |
+| # | Rule file | What it enforces |
+|---|-----------|------------------|
+| 1 | `stack-constraints.mdc` | Required stack and forbidden replacements. |
+| 2 | `observability-conventions.mdc` | Metrics, structured logs, Sentry, and scenario signal conventions. |
+| 3 | `prisma-patterns.mdc` | Prisma usage, migrations, and database access rules. |
+| 4 | `frontend-patterns.mdc` | Next.js App Router, TanStack Query, React Hook Form, shadcn/ui, and Tailwind patterns. |
+| 5 | `error-handling.mdc` | Backend exception handling and frontend error display. |
 
 ### Marketplace skills
 
