@@ -6,7 +6,7 @@
 |---|---|
 | **URL** | `https://github.com/nbenliogludev/Signal-Lab.git` |
 | **Ветка** | `main` |
-| **Время** | ~10–12 ч |
+| **Время** | ~9–10 ч |
 
 ---
 
