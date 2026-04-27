@@ -6,9 +6,9 @@
 
 ## Репозиторий
 
-- **URL**: `https://github.com/nbenliogludev/Signal-Lab.git` *(обнови при форке)*
-- **Ветка**: `___` *(укажи ветку PR, не обязательно текущая локальная)*
-- **Время работы** (приблизительно): `___` часов
+- **URL**: `https://github.com/nbenliogludev/Signal-Lab.git`
+- **Ветка**: `main` *(текущая локальная ветка на момент заполнения чеклиста; для PR укажи ветку PR)*
+- **Время работы** (приблизительно): **10–12** часов
 
 ---
 
@@ -33,37 +33,39 @@ docker compose down
 
 | Технология | Используется? | Где посмотреть |
 |-----------|:------------:|----------------|
-| Next.js (App Router) | ☐ | `apps/frontend/app/` |
-| shadcn/ui | ☐ | `apps/frontend/components/ui/` |
-| Tailwind CSS | ☐ | `apps/frontend/` |
-| TanStack Query | ☐ | `apps/frontend/` |
-| React Hook Form | ☐ | `apps/frontend/` |
-| NestJS | ☐ | `apps/backend/src/` |
-| PostgreSQL | ☐ | `docker-compose.yml`, Prisma |
-| Prisma | ☐ | `prisma/schema.prisma` |
-| Sentry | ☐ | `apps/backend/src/observability/sentry.service.ts` |
-| Prometheus | ☐ | `apps/backend/src/observability/metrics.service.ts`, `infra/prometheus/` |
-| Grafana | ☐ | `infra/grafana/` |
-| Loki | ☐ | `infra/loki/`, host порт **3102** |
+| Next.js (App Router) | ☑ | `apps/frontend/app/` |
+| shadcn/ui | ☑ | `apps/frontend/components/ui/` |
+| Tailwind CSS | ☑ | `apps/frontend/` (`tailwind.config.ts`, глобальные стили) |
+| TanStack Query | ☑ | `apps/frontend/` (`@tanstack/react-query`, например `components/dashboard.tsx`) |
+| React Hook Form | ☑ | `apps/frontend/` (`react-hook-form`, например `components/dashboard.tsx`) |
+| NestJS | ☑ | `apps/backend/src/` |
+| PostgreSQL | ☑ | `docker-compose.yml` (сервис `postgres`), Prisma datasource |
+| Prisma | ☑ | `prisma/schema.prisma`, клиент в `apps/backend/generated/prisma` (после generate) |
+| Sentry | ☑ | `apps/backend/src/observability/sentry.service.ts` |
+| Prometheus | ☑ | `apps/backend/src/observability/metrics.service.ts`, scrape в `infra/prometheus/prometheus.yml` |
+| Grafana | ☑ | `infra/grafana/provisioning/`, UI на хосте **3100** → контейнерный порт 3000 (`docker-compose.yml`) |
+| Loki | ☑ | `infra/loki/config.yaml`, host порт **3102** → контейнерный 3100 (`docker-compose.yml`) |
 
 ---
 
 ## Observability Verification
 
-Опиши, как интервьюер может проверить каждый сигнал:
+Как проверить каждый сигнал (после `docker compose up -d`, см. README — Verification walkthrough):
 
 | Сигнал | Как воспроизвести | Где посмотреть результат |
 |--------|-------------------|------------------------|
-| Prometheus metric | `curl http://localhost:3001/metrics`, запустить success-сценарий | `scenario_runs_total`, Grafana |
-| Grafana dashboard | Открыть дашборд из README | `http://localhost:3100/d/signal-lab-observability/signal-lab-observability` |
-| Loki log | Grafana → Explore → Loki `{app="signal-lab"}` после сценария | Loki datasource |
-| Sentry exception | Реальный DSN в `.env`, сценарий `system_error` | Проект Sentry |
+| **Prometheus metric** | Запустить любой сценарий (UI или `curl` к `POST /api/scenarios/run` как в README), затем `curl -s http://localhost:3001/metrics` и найти в выводе строки `scenario_runs_total` | Счётчик `scenario_runs_total` и гистограмма `signal_lab_scenario_run_duration_seconds` в тексте `/metrics`; таргеты Prometheus: `http://localhost:9090/targets` |
+| **Grafana dashboard** | Открыть в браузере (логин по умолчанию из README: `admin` / `admin`) | **`http://localhost:3100/d/signal-lab-observability/signal-lab-observability`** — дашборд из README и provisioning в `infra/grafana/provisioning/dashboards/` |
+| **Loki log** | После сценария: Grafana → **Explore** → datasource **Loki** → запрос **`{app="signal-lab"}`** (как в README) | JSON-логи бэкенда из файла, который Promtail читает с volume `backend_logs` (`docker-compose.yml`) |
+| **Sentry exception** | В **локальном** `.env` задать реальный **`SENTRY_DSN`** (значение не копировать в чеклист); в `.env.example` остаётся **placeholder**. Затем выполнить сценарий **`system_error`** | Событие в проекте Sentry (если DSN валидный); при placeholder DSN SDK по коду репозитория не шлёт реальные события |
 
 ---
 
 ## Cursor AI Layer
 
 ### Custom Skills
+
+Файлы: `.cursor/skills/<имя>/SKILL.md`.
 
 | # | Skill name | Назначение |
 |---|-----------|-----------|
@@ -74,6 +76,8 @@ docker compose down
 
 ### Commands
 
+Файлы: `.cursor/commands/*.md`.
+
 | # | Command | Что делает |
 |---|---------|-----------|
 | 1 | `/health-check` | Проверка Docker stack и смоук API (см. `.cursor/commands/health-check.md`) |
@@ -81,7 +85,9 @@ docker compose down
 | 3 | `/add-endpoint` | Шаблон нового NestJS API с observability-сервисами |
 | 4 | `/run-prd` | Запуск оркестратора PRD 004 по `SKILL.md` |
 
-### Hooks
+### Hooks (hook playbooks)
+
+Файлы: `.cursor/hooks/*.md`. Это **ручные** чеклисты для агента/разработчика; **не** автозапуск Cursor: в репозитории **нет** `hooks.json`, события из IDE сами по себе эти файлы не выполняют.
 
 | # | Playbook | Какую проблему решает |
 |---|----------|----------------------|
@@ -89,9 +95,9 @@ docker compose down
 | 2 | `after-prisma-schema-change.md` | Пропуск migrate / generate после правок схемы |
 | 3 | `before-commit.md` | Секреты в git, `.env` в stage, `console.log`, TODO |
 
-*(В репозитории это **ручные** playbook-файлы; авто-hooks через `hooks.json` не поставляются.)*
-
 ### Rules
+
+Файлы: `.cursor/rules/*.mdc`.
 
 | # | Rule file | Что фиксирует |
 |---|----------|---------------|
@@ -103,7 +109,7 @@ docker compose down
 
 ### Marketplace Skills
 
-Рекомендованный набор описан в `.cursor/marketplace-skills.md`. **Факты установки в Cursor из репозитория не проверяются** — отметь вручную, что реально включено у тебя в IDE:
+Рекомендованный набор **описан** в `.cursor/marketplace-skills.md` (идеи для Cursor Marketplace / community skills). **По одним только файлам репозитория нельзя доказать**, что те или иные marketplace skills установлены в конкретном Cursor — установка и включение проверяются **в UI Cursor** (Settings / Rules / Skills / Marketplace — формулировка зависит от версии).
 
 | # | Skill | Зачем подключён |
 |---|-------|----------------|
@@ -127,34 +133,56 @@ docker compose down
 ## Orchestrator
 
 - **Путь к skill**: `.cursor/skills/signal-lab-orchestrator/SKILL.md`
-- **Путь к context file** (пример): `.execution/{executionId}/context.json` (= PRD F1 `.execution/<timestamp>/`, то же имя папки) где `executionId` = `YYYY-MM-DD-HH-mm`
-- **Сколько фаз**: 7 (`analysis`, `codebase`, `planning`, `decomposition`, `implementation`, `review`, `report`)
-- **Какие задачи для fast model**: узкий механический объём (DTO, мелкий UI, доки); **`default`** — архитектура, несколько систем, сложная семантика ошибок/observability (PRD F3; без жёсткой квоты)
-- **Декомпозиция (F4)**: задачи по отдельности (БД / backend / frontend / docs / observability vs UI по необходимости), без одного «сделай всё» mega-task; см. `SKILL.md` (паттерн Signal Lab, не фиксированное число задач)
-- **Review + hook playbooks**: в фазе `review` пройти релевантные `.cursor/hooks/*.md` как чеклисты (вручную); в `report.md` — кратко pass/fail/skipped
-- **Поддерживает resume**: да — сначала читать `context.json`; не повторять `completed`; **`failed`** задачи не скрывать
+- **Контекст последнего зафиксированного прогона**: `.execution/2026-04-27-02-01/context.json` (общий шаблон пути по PRD 004: `.execution/{executionId}/context.json`, где `executionId` = `YYYY-MM-DD-HH-mm`)
+- **Отчёт того же прогона**: `.execution/2026-04-27-02-01/report.md` (в т.ч. секция **manual hook playbooks** — pass / fail / skipped)
+- **Фаз**: **7** — `analysis`, `codebase`, `planning`, `decomposition`, `implementation`, `review`, `report`
+- **Короткий тест `/run-prd`**: промпт вида  
+  `/run-prd Add a new Signal Lab scenario: cache_miss_spike. Use the orchestrator skill and existing repo rules/skills.`  
+  (текст сохранён в `prdText` внутри указанного `context.json`)
+- **Результат прогона**: в репозитории добавлен сценарий **`cache_miss_spike`** как дополнительная демонстрация оркестратора; в `context.json` — атомарная декомпозиция задач, смешение **fast** / **default** по задачам, `suggestedSkill`, итоговый отчёт и состояние для **resume** (читать `context.json` первым; не повторять `completed`; **`failed`** не скрывать)
+- **Декомпозиция (F4)**: см. `SKILL.md` — без mega-task; разделение по слоям по необходимости
+- **Review**: только **ручной** разбор hook playbooks из `.cursor/hooks/*.md`; в чеклисте **не** утверждаем, что хуки Cursor выполняются автоматически
 
 ---
 
 ## Скриншоты / видео
 
-- [ ] UI приложения
-- [ ] Grafana dashboard с данными
-- [ ] Loki logs
-- [ ] Sentry error
+Файлы в репозитории (папка `docs/`):
 
-(Приложи файлы или ссылки ниже)
+| Что показано | Файл | Содержимое (кратко) |
+|--------------|------|---------------------|
+| UI приложения | [`docs/dashboard_ui.png`](docs/dashboard_ui.png) | Сценарный раннер и история запусков |
+| Grafana dashboard | [`docs/grafana.png`](docs/grafana.png) | Дашборд Signal Lab (метрики / панели) |
+| Loki logs | [`docs/loki.png`](docs/loki.png) | Explore Loki, структурированные логи бэкенда |
+| Sentry error | [`docs/sentry.png`](docs/sentry.png) | Зафиксированное исключение (при реальном DSN) |
+| Метрики / Prometheus | [`docs/metrics.png`](docs/metrics.png) | Вывод или UI, связанный с метриками сценариев |
+
+*(Видео в репозитории не приложено — при необходимости добавь ссылку отдельно.)*
 
 ---
 
 ## Что не успел и что сделал бы первым при +4 часах
 
+- **Marketplace skills**: из файлов репозитория нельзя доказать установку в Cursor; список рекомендаций — в `.cursor/marketplace-skills.md`, факт включения — только в UI IDE.
+- **Hooks**: в репозитории — **ручные** hook playbooks (`.cursor/hooks/*.md`), не автоматический `hooks.json`.
+- **Sentry**: полная проверка требует **реального** `SENTRY_DSN` в локальном `.env`; в репозитории в шаблонах остаётся **placeholder** (см. README про `.env.example`).
+- **+4 часа**: при необходимости — автоматизировать smoke-проверку после сценариев или расширить Grafana-панели под новые типы сценариев.
+
 ---
 
 ## Вопросы для защиты (подготовься)
 
-1. Почему именно такая декомпозиция skills?
-2. Какие задачи подходят для малой модели и почему?
-3. Какие marketplace skills подключил в Cursor, а какие закрыты custom — и почему?
-4. Как playbook-файлы в `.cursor/hooks/` снижают ошибки, если они не авто-запускаются?
-5. Как orchestrator экономит контекст по сравнению с одним большим промптом?
+1. Почему именно такая декомпозиция skills?  
+   *Подсказка:* по доменам (observability vs endpoint vs Prisma vs оркестратор), чтобы Cursor открывал один узкий `SKILL.md` за раз.
+
+2. Какие задачи подходят для малой модели и почему?  
+   *Подсказка:* механические правки (DTO, мелкий UI); PRD 004 допускает **default** для сквозной логики и observability.
+
+3. Какие marketplace skills подключил в Cursor, а какие закрыты custom — и почему?  
+   *Подсказка:* сослаться на `.cursor/marketplace-skills.md` vs `.cursor/rules/*.mdc` и четыре custom skills.
+
+4. Как playbook-файлы в `.cursor/hooks/` снижают ошибки, если они не авто-запускаются?  
+   *Подсказка:* чеклист перед коммитом/после смены схемы; снижает забывчивость, а не заменяет CI.
+
+5. Как orchestrator экономит контекст по сравнению с одним большим промптом?  
+   *Подсказка:* фазы, `context.json`, субагенты, атомарные задачи — см. PRD 004 и `.execution/2026-04-27-02-01/context.json`.
