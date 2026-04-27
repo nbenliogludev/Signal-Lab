@@ -1,6 +1,6 @@
 # Playbook: After New Endpoint
 
-> **Not a Cursor-automated hook.** This file is a **manual playbook** for the agent or developer. Nothing here runs unless you (or the agent) follow it. Cursor `hooks.json` is **not** included in this repository.
+> **Manual playbook** for the agent or developer — follow it step by step. Optional automation: project `.cursor/hooks.json` runs reminder scripts in `.cursor/hooks/scripts/` on `afterFileEdit` / `stop` when your Cursor version loads them; behavior depends on local Cursor. Full detail stays in this markdown.
 
 ## When to run this playbook
 After any new NestJS controller method or route handler is created or modified.

@@ -312,10 +312,12 @@ Slash-commands to instantly invoke specific system-level workflows:
 - **`/run-prd`**: (Placeholder for the upcoming Orchestrator PRD 004).
 
 ### 4. Hooks (`.cursor/hooks/`)
-Checklists intended to be run before or after particular workflows to catch common mistakes early:
-- **`after-new-endpoint`**: Confirms that Sentry and Prometheus were explicitly handled in newly added code.
-- **`after-prisma-schema-change`**: Verifies that a migration was correctly built and the client was regenerated.
-- **`before-commit`**: Checks staged files for hardcoded `.env` leaks, `console.log` leftovers, and blocking TODOs.
+
+- **Playbooks:** Markdown checklists in `.cursor/hooks/*.md` (run manually or with the agent).
+- **Project hooks:** `.cursor/hooks.json` + scripts in `.cursor/hooks/scripts/` — lightweight stderr reminders on `afterFileEdit` / `stop` (no file edits). Whether Cursor runs them depends on your app version; see [Cursor Hooks](https://cursor.com/docs/hooks). You can always run the `.sh` files manually from the repo root.
+- **`after-new-endpoint.md`**: Confirms Sentry and Prometheus were handled after endpoint changes.
+- **`after-prisma-schema-change.md`**: Migration + client regeneration after schema edits.
+- **`before-commit.md`**: Staged `.env`, secrets patterns, `console.log`, and blocking TODOs.
 
 ### 5. Marketplace Skills (`.cursor/marketplace-skills.md`)
 Community-driven skills required for the core technologies in the project, intended to be added via Cursor UI Settings. Our index file explains why we chose each:

@@ -1,6 +1,6 @@
 # Playbook: After Prisma Schema Change
 
-> **Not a Cursor-automated hook.** Manual playbook only; no `hooks.json` in this repo.
+> **Manual playbook** — run after every `schema.prisma` edit. Optional: `.cursor/hooks.json` + `.cursor/hooks/scripts/after-file-edit.sh` may print a Prisma reminder on save when Cursor runs project hooks.
 
 ## When to run this playbook
 After any edit to `prisma/schema.prisma` — new model, new field, changed relation, changed enum.

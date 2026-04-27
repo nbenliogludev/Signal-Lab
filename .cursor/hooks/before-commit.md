@@ -1,6 +1,6 @@
 # Playbook: Before Commit
 
-> **Not a Cursor-automated hook.** Manual playbook only; run these checks yourself or ask the agent to run them before committing. No `hooks.json` ships here.
+> **Manual playbook** — run before `git commit`. Optional: `.cursor/hooks.json` runs `.cursor/hooks/scripts/final-check.sh` on agent `stop` (stderr reminders only); confirm in Cursor Hooks output if unsure. This file remains the full checklist.
 
 ## When to run this playbook
 Before any `git commit` — especially when staging files that include `.env`, config files, or new service code.
