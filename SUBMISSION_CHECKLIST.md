@@ -1,9 +1,5 @@
 # Signal Lab — Submission Checklist
 
-Заполни этот файл перед сдачей. Он поможет интервьюеру быстро проверить решение.
-
----
-
 ## Репозиторий
 
 - **URL**: `https://github.com/nbenliogludev/Signal-Lab.git`
