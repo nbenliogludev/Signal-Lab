@@ -67,14 +67,14 @@
 
 ### Commands
 
-`.cursor/commands/*.md`
+| # | Command name | Назначение |
+|---|--------------|------------|
+| 1 | `/health-check` | Проверка Docker Compose (сервисы «Up»), `GET /api/health` и базовых смоук-проверок стека (см. `.cursor/commands/health-check.md`) |
+| 2 | `/check-obs` | Чеклист метрик / логов / Sentry для конкретного backend-файла или эндпоинта (см. `.cursor/commands/check-obs.md`) |
+| 3 | `/add-endpoint` | Скаффолд нового NestJS REST-среза с observability по шаблону навыка `nestjs-endpoint` (см. `.cursor/commands/add-endpoint.md`) |
+| 4 | `/run-prd` | Запуск многофазного оркестратора PRD 004: `SKILL.md`, `context.json`, фазы и отчёт (см. `.cursor/commands/run-prd.md`) |
 
-| # | Command | Role |
-|---|---------|------|
-| 1 | `/health-check` | Stack + smoke API |
-| 2 | `/check-obs` | Observability checklist |
-| 3 | `/add-endpoint` | Nest endpoint template |
-| 4 | `/run-prd` | Orchestrator (see skill) |
+Файлы: `.cursor/commands/<name>.md`.
 
 ### Hooks / playbooks
 
