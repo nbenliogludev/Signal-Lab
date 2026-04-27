@@ -2,7 +2,7 @@
 
 Signal Lab is a small fullstack observability playground. The UI runs scenario flows against a NestJS backend, persists every run in PostgreSQL through Prisma, and emits metrics, structured logs, and Sentry-ready exceptions.
 
-This branch implements PRD 002 and PRD 003 (Observability Demo and Cursor AI Layer). Orchestrator work is intentionally left for later PRDs.
+This repo implements the observability demo (PRD 002), the Cursor AI layer (PRD 003), and the **PRD 004 orchestrator** (`signal-lab-orchestrator` skill + `/run-prd`).
 
 ## Stack
 
@@ -303,13 +303,14 @@ Reusable and highly specific "runbooks" for the AI to follow. These are used to 
 - **`observability`**: A workflow for correctly scaffolding counters, histograms, and structured logs inside any endpoint.
 - **`nestjs-endpoint`**: A step-by-step path to successfully build an endpoint with DTOs, controllers, services, and pipes completely.
 - **`prisma-schema`**: The mandatory schema modification cycle (`change` -> `migrate dev` -> `generate` -> `verify`).
+- **`signal-lab-orchestrator`**: PRD 004 seven-phase pipeline with `context.json`, task decomposition, fast/default model hints, review loop, and resume.
 
 ### 3. Commands (`.cursor/commands/`)
 Slash-commands to instantly invoke specific system-level workflows:
 - **`/health-check`**: Validates the complete Docker Compose architecture, curling APIs and Prometheus endpoints.
 - **`/check-obs`**: A synthetic test to ensure logs and metrics correctly reach the aggregator.
 - **`/add-endpoint`**: Scaffolds a NestJS endpoint.
-- **`/run-prd`**: (Placeholder for the upcoming Orchestrator PRD 004).
+- **`/run-prd`**: Runs work through the orchestrator per **`.cursor/commands/run-prd.md`** and **`.cursor/skills/signal-lab-orchestrator/SKILL.md`**.
 
 ### 4. Hooks (`.cursor/hooks/`)
 
@@ -319,7 +320,19 @@ Slash-commands to instantly invoke specific system-level workflows:
 - **`after-prisma-schema-change.md`**: Migration + client regeneration after schema edits.
 - **`before-commit.md`**: Staged `.env`, secrets patterns, `console.log`, and blocking TODOs.
 
-### 5. Marketplace Skills (`.cursor/marketplace-skills.md`)
+### 5. Orchestrator (PRD 004)
+
+- **Skill:** `.cursor/skills/signal-lab-orchestrator/SKILL.md` (with `COORDINATION.md` / `EXAMPLE.md`).
+- **Phases (7):** `analysis` → `codebase` → `planning` → `decomposition` → `implementation` → `review` → `report`.
+- **State:** each run uses **`.execution/{executionId}/context.json`** (same folder as PRD F1 **`.execution/<timestamp>/`** when `executionId` is that timestamp). Optional **`report.md`** in the same folder.
+- **Tasks:** atomic 5–10 minute items with **`fast`** / **`default`** model hints and **`suggestedSkill`**; see the skill for Signal Lab decomposition patterns.
+- **Resume:** read `context.json` first; do not redo completed phases/tasks; keep failed tasks visible.
+- **Review:** markdown **hook playbooks** under **`.cursor/hooks/*.md`** are applied **manually** during review; record pass / fail / skipped in `report.md` when relevant (playbooks do not auto-run unless you follow them).
+- **Example proof run:** `.execution/2026-04-27-02-01/context.json` and **`.execution/2026-04-27-02-01/report.md`** — from a short prompt such as:  
+  `/run-prd Add a new Signal Lab scenario: cache_miss_spike. Use the orchestrator skill and existing repo rules/skills.`  
+  (outcome: **`cache_miss_spike`** scenario plus proof artifacts; hook playbook notes in **`report.md`**).
+
+### 6. Marketplace Skills (`.cursor/marketplace-skills.md`)
 Community-driven skills required for the core technologies in the project, intended to be added via Cursor UI Settings. Our index file explains why we chose each:
 - `nextjs-react-typescript`
 - `nextjs-app-router`
