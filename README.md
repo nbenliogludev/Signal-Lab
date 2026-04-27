@@ -98,6 +98,9 @@ API: `POST /api/scenarios/run` with JSON `{ "type": "<type>", "name": "<optional
 | `validation_error` | **400** | Run saved, then `BadRequestException` | Warn log; metric with `status` **error**; Sentry **breadcrumb** (not an error event by default) |
 | `system_error` | **500** | Run saved, synthetic error thrown | Error log; metric **error**; **Sentry exception** (if DSN enabled and not placeholder) |
 | `slow_request` | **200** | Random delay **2–5 s**, then saved as slow | Warn log; metrics for completed path after delay |
+| `database_timeout` | **504** | PostgreSQL `statement_timeout` + `pg_sleep` forces cancel; run saved as **timeout** | Error log; metric `status` **timeout**; **Sentry exception** (if DSN enabled) |
+| `external_api_timeout` | **504** | Outbound `fetch` to **`SCENARIO_EXTERNAL_API_URL`** (default `https://httpbin.org/delay/3`) with **~120 ms** client abort; run saved as **external_timeout** | Error log; metric `status` **external_timeout**; **Sentry** (if DSN enabled); requires outbound network from backend unless URL overridden |
+| `cache_miss_spike` | **200** | In-process synthetic cache: many **cold keys** in one request; run saved as **cache_miss_spike** | Warn log; metric `status` **cache_miss_spike**; Sentry **breadcrumb** (not an error event) |
 | `teapot` | **418** | Run saved with teapot metadata; body includes `signal: 42` | Info log; metric label `status` **teapot** (bonus / easter-egg path per PRD 002 F4) |
 
 ---
@@ -112,8 +115,11 @@ API: `POST /api/scenarios/run` with JSON `{ "type": "<type>", "name": "<optional
 6. **Grafana** — Log in at http://localhost:3100 (`admin` / `admin` by default). Open **Signal Lab Observability**:  
    http://localhost:3100/d/signal-lab-observability/signal-lab-observability
 7. **Loki** — Grafana → **Explore** → Loki → query `{app="signal-lab"}` (run at least one scenario first).
-8. **Sentry** — Only if you replaced `SENTRY_DSN` with a real project DSN: repeat `system_error` and confirm the event in Sentry.
+8. **Sentry** — Only if you replaced `SENTRY_DSN` with a real project DSN: repeat `system_error`, `database_timeout`, or `external_api_timeout` and confirm the event in Sentry.
 9. **Teapot** (optional) — `curl -i -X POST http://localhost:3001/api/scenarios/run -H "Content-Type: application/json" -d '{"type":"teapot"}'` → expect **418** and JSON containing `"signal":42`.
+10. **Database timeout** (optional) — `curl -i -X POST http://localhost:3001/api/scenarios/run -H "Content-Type: application/json" -d '{"type":"database_timeout"}'` → expect **504** and a history row with status **timeout**.
+11. **External API timeout** (optional, needs outbound HTTP from backend) — same curl with `'{"type":"external_api_timeout"}'` → expect **504** and history status **external_timeout** (override URL via `SCENARIO_EXTERNAL_API_URL` in `.env` / Compose).
+12. **Cache miss spike** (optional) — `'{"type":"cache_miss_spike"}'` → **200** and history status **cache_miss_spike**; check Loki for the warn line and `scenario_runs_total` label.
 
 ---
 
@@ -179,10 +185,14 @@ Rules live in `.cursor/rules/*.mdc` (Cursor loads them as project rules). Skills
 |------|--------|
 | **Skill path** | `.cursor/skills/signal-lab-orchestrator/SKILL.md` (subagent templates: `COORDINATION.md`, examples: `EXAMPLE.md`) |
 | **Slash command** | `/run-prd` — see `.cursor/commands/run-prd.md` |
-| **State file** | `.execution/<executionId>/context.json` where `executionId` is `YYYY-MM-DD-HH-mm` (same as folder name) |
+| **State file** | `.execution/{executionId}/context.json` (= PRD F1 `.execution/<timestamp>/` with the same folder name) |
 | **Phases (7)** | `analysis` → `codebase` → `planning` → `decomposition` → `implementation` → `review` → `report` |
-| **Models** | Tasks carry `model`: **`fast`** (most work) vs **`default`** (heavier design / integration) |
-| **Resume** | If `context.json` exists and run `status` is `in_progress`, continue from `currentPhase` / next pending task; do not redo completed phases |
+| **Tasks (F4)** | Each task **5–10 min**, **`description`** 1–3 sentences, **`suggestedSkill`** tied to repo skills; **no** single mega-task spanning backend + frontend + docs |
+| **Models** | `tasks[].model`: **`fast`** for mechanical work; **`default`** for architecture, multi-system, tricky observability/error semantics (PRD F3 — intent: small models do most tasks, not a fixed ratio) |
+| **Review / retry** | Read-only reviewer; up to **3** retries per task; **hook playbooks** (`.cursor/hooks/*.md`) applied **manually** in review; **pass / fail / skipped** in `report.md` when relevant; failed tasks stay visible and do not block unrelated tasks (PRD F6–F7) |
+| **Resume** | Same `executionId` folder: read `context.json` first; if `status` is `in_progress`, continue from `currentPhase` / next pending task; **do not** redo completed phases; **failed** tasks remain in JSON and final report |
+| **Git** | Orchestrator docs: no force push / hard reset / branch delete; branch/commit only if **you** ask for git workflow |
+| **Hooks** | **Playbooks** under `.cursor/hooks/*.md` (manual); not auto-run unless you add real Cursor hook config |
 
 ---
 

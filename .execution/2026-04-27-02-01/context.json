@@ -1,0 +1,91 @@
+{
+  "executionId": "2026-04-27-02-01",
+  "prdPath": null,
+  "prdText": "Add a new Signal Lab scenario: cache_miss_spike. Use the orchestrator skill and existing repo rules/skills.",
+  "status": "completed",
+  "currentPhase": "report",
+  "startedAt": "2026-04-27T02:01:00.000Z",
+  "updatedAt": "2026-04-27T02:05:00.000Z",
+  "phases": {
+    "analysis": {
+      "status": "completed",
+      "result": "Add scenario type cache_miss_spike: synthetic in-request burst of cache misses (cold keys), HTTP 200, persist ScenarioRun with status cache_miss_spike, warn logs + scenario_runs_total + Sentry breadcrumb; extend DTO enum, service switch, frontend select + api union, README table."
+    },
+    "codebase": {
+      "status": "completed",
+      "result": "ScenariosService switch + private handlers; CreateScenarioRunDto scenarioTypes; MetricsService.recordScenarioRun(type,status,duration); dashboard scenarioOptions + getBadgeVariant; README scenario table."
+    },
+    "planning": {
+      "status": "completed",
+      "result": "Implement completeCacheMissSpikeScenario: Map TTL cache, loop unique keys so each lookup is miss, count misses, Prisma create, logger.warn, metrics, addBreadcrumb (non-error path)."
+    },
+    "decomposition": {
+      "status": "completed",
+      "result": "Tasks: task-001 DTO/OpenAPI enum (nestjs-endpoint, fast); task-002 service behavior + observability (observability + default model); task-003 frontend types + UI (none, fast); task-004 README (none, fast). Review/report separate phases."
+    },
+    "implementation": {
+      "status": "completed",
+      "completedTasks": 4,
+      "totalTasks": 4,
+      "result": "All implementation tasks completed; npm run typecheck passed in apps/backend and apps/frontend."
+    },
+    "review": {
+      "status": "completed",
+      "result": "Readonly review: stack constraints respected; recordScenarioRun + structured logger + Sentry breadcrumb for non-error spike. Hook playbooks summarized in report.md."
+    },
+    "report": {
+      "status": "completed",
+      "result": "See report.md in this directory."
+    }
+  },
+  "tasks": [
+    {
+      "id": "task-001",
+      "title": "Add cache_miss_spike to scenarioTypes and OpenAPI enum",
+      "description": "Extend create-scenario-run.dto.ts scenarioTypes array with cache_miss_spike so validation and Swagger enum accept the new type.",
+      "type": "backend",
+      "suggestedSkill": "nestjs-endpoint",
+      "complexity": "low",
+      "model": "fast",
+      "status": "completed",
+      "retries": 0,
+      "dependsOn": []
+    },
+    {
+      "id": "task-002",
+      "title": "Implement cache_miss_spike handler in ScenariosService",
+      "description": "Add switch branch and completeCacheMissSpikeScenario: synthetic TTL Map, cold-key loop, persist run with metadata (miss count), logger.warn, recordScenarioRun with status cache_miss_spike, Sentry addBreadcrumb.",
+      "type": "backend",
+      "suggestedSkill": "observability",
+      "complexity": "medium",
+      "model": "default",
+      "status": "completed",
+      "retries": 0,
+      "dependsOn": ["task-001"]
+    },
+    {
+      "id": "task-003",
+      "title": "Frontend: ScenarioType, dashboard option, badge variant",
+      "description": "Add cache_miss_spike to api.ts ScenarioType; dashboard scenarioOptions; getBadgeVariant warning styling for cache_miss_spike status.",
+      "type": "frontend",
+      "suggestedSkill": "none",
+      "complexity": "low",
+      "model": "fast",
+      "status": "completed",
+      "retries": 0,
+      "dependsOn": ["task-002"]
+    },
+    {
+      "id": "task-004",
+      "title": "README scenario table and walkthrough step",
+      "description": "Document cache_miss_spike HTTP 200, signals, and optional curl step 12.",
+      "type": "docs",
+      "suggestedSkill": "none",
+      "complexity": "low",
+      "model": "fast",
+      "status": "completed",
+      "retries": 0,
+      "dependsOn": ["task-003"]
+    }
+  ]
+}

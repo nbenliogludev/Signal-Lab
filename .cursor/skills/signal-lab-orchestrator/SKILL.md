@@ -1,154 +1,177 @@
 ---
 name: Signal Lab Orchestrator
-description: PRD-driven pipeline with persisted context.json, phased analysis through report, subagent delegation, fast/default task routing, and resume after interruption (PRD 004).
+description: PRD 004 seven-phase pipeline for Signal Lab only — context.json under .execution/{executionId}/, atomic tasks, fast/default models, subagent delegation, review/retry, hook playbook checks, resume. Not a universal framework.
 ---
 
 # Signal Lab Orchestrator
 
-You are the **Orchestrator**. You run the SDLC pipeline from a PRD to a final report. You **do not** implement large code changes yourself: you maintain `context.json`, advance phases, and delegate work to subagents (e.g. via the Task tool) using `.cursor/skills/signal-lab-orchestrator/COORDINATION.md`.
+You are the **Orchestrator** for **this repository only** (Signal Lab). Terminology and phase order follow **PRD 004** (`prds/004_prd-orchestrator.md`). The AI layer that supports you (rules, skills, commands, hook **playbooks**) is **PRD 003** (`prds/003_prd-cursor-ai-layer.md`).
 
-## Principles
+You maintain **`.execution/{executionId}/context.json`** (PRD F1–F2) and delegate implementation/review via **`.cursor/skills/signal-lab-orchestrator/COORDINATION.md`**. You **do not** replace the human: escalate secrets, production impact, or ambiguous requirements. You **do not** claim full autonomy.
 
-1. **Context economy** — keep the main chat small; heavy work in subagents.
-2. **Atomic tasks** — each task doable in **5–10 minutes**, 1–3 sentences, with optional `dependsOn`.
-3. **Persist everything** — after each meaningful step, write `.execution/<executionId>/context.json` on disk before continuing.
-4. **Resumable** — on restart, read the latest `context.json`; **do not** re-run phases with `status: "completed"`. Resume from `currentPhase` and the next pending task.
-5. **Rules first** — obey `.cursor/rules/*.mdc` and reuse `.cursor/skills/*` where a task matches a skill.
+## Relation to PRD 003
+
+- **`/run-prd`** is the project command (PRD 003 R3) that drives this skill — see **`.cursor/commands/run-prd.md`**.
+- **Rules** (`.cursor/rules/*.mdc`), **custom skills** (`.cursor/skills/*/SKILL.md` except this folder’s coordination files), and **hook playbooks** (`.cursor/hooks/*.md`) are **manual checklists** — PRD 003 R4 hooks are **not** auto-fired unless real Cursor hook automation is added later.
+
+## What this is not (PRD 004 «Что НЕ нужно»)
+
+- Not a **universal** multi-repo PRD framework.
+- Not **full autonomy** without a human.
+- Not **hook automation** — use the phrase **hook playbooks** for `.cursor/hooks/*.md`.
 
 ---
 
 ## PRD input (F1)
 
-Accept **either**:
+- **Path or text:** `prdPath` (repo-relative file) and/or `prdText` (inline). At least one must be set. If both exist, prefer **`prdPath`** for traceability; summarize in `phases.analysis.result`.
+- **Working directory (F1):** PRD 004 names **`.execution/<timestamp>/`**. In this repo **`executionId`** in `context.json` **is** that timestamp string (folder name). These refer to the **same** path:
+  - **`.execution/<timestamp>/context.json`**
+  - **`.execution/{executionId}/context.json`**
+- Create **`context.json`** in that folder at start.
+- **Large inline PRD:** write full text to **`.execution/{executionId}/prd-input.md`**, set **`prdPath`** to that path, **`prdText`** to `null` or a one-line summary.
 
-- **`prdPath`**: repository-relative path (e.g. `prds/004_prd-orchestrator.md`), **or**
-- **`prdText`**: full PRD text inline when the user pastes it (set `prdPath` to `null`).
-
-At least one of `prdPath` or `prdText` must be non-null. If both are provided, prefer `prdPath` for traceability and copy a short excerpt into `phases.analysis.result`.
-
----
-
-## Execution directory (F1)
-
-Use **one** folder per run:
-
-```text
-.execution/<executionId>/
-  context.json    # required, machine-updated state
-  report.md       # optional; final human summary (also paste into chat)
-```
-
-**`<executionId>`** — filesystem-safe id, **same string** as the `executionId` field inside `context.json`. Format: **`YYYY-MM-DD-HH-mm`** (UTC or local, but be consistent within one run), e.g. `2026-04-26-21-15`.
+**`executionId`:** filesystem-safe string, same as folder name and JSON field. Format **`YYYY-MM-DD-HH-mm`** (PRD F1 “timestamp”).
 
 ---
 
-## `context.json` schema (single contract)
+## `context.json` (PRD F2 core + Signal Lab extensions)
 
-Create or update this structure (PRD 004 + Signal Lab extensions):
+PRD **F2** defines: `executionId`, `prdPath`, `status`, `currentPhase`, `phases`, optional `signal`, and `tasks` with `id`, `type`, `complexity`, `model`, `status`.
 
-```json
-{
-  "executionId": "2026-04-26-21-15",
-  "prdPath": "prds/004_prd-orchestrator.md",
-  "prdText": null,
-  "status": "in_progress",
-  "currentPhase": "implementation",
-  "startedAt": "2026-04-26T21:15:00.000Z",
-  "updatedAt": "2026-04-26T21:45:00.000Z",
-  "phases": {
-    "analysis": { "status": "completed", "result": "…" },
-    "codebase": { "status": "completed", "result": "…" },
-    "planning": { "status": "completed", "result": "…" },
-    "decomposition": { "status": "completed", "result": "…" },
-    "implementation": {
-      "status": "in_progress",
-      "completedTasks": 5,
-      "totalTasks": 8,
-      "result": ""
-    },
-    "review": { "status": "pending", "result": "" },
-    "report": { "status": "pending", "result": "" }
-  },
-  "tasks": [
-    {
-      "id": "task-001",
-      "title": "Short imperative title",
-      "description": "1–3 sentences. One concrete outcome.",
-      "type": "database",
-      "suggestedSkill": "prisma-schema",
-      "complexity": "low",
-      "model": "fast",
-      "status": "pending",
-      "retries": 0,
-      "dependsOn": []
-    }
-  ],
-  "signal": 42
-}
-```
+**Extensions** (required for F4/F5/F7 in this repo) — add to each task after decomposition:
 
-### Field notes
+| Field | Purpose |
+|-------|---------|
+| `title` | Short imperative |
+| `description` | **1–3 sentences** (F4) |
+| `suggestedSkill` | See **Skill mapping** below |
+| `retries` | Review loop counter (cap 3) |
+| `dependsOn` | Task id dependencies |
+| `startedAt` / `updatedAt` | ISO-8601 at execution level |
 
-- **`status`** (execution): `in_progress` | `completed` | `failed` (set `completed` when phase `report` is done and tasks resolved).
-- **`currentPhase`**: one of **`analysis` | `codebase` | `planning` | `decomposition` | `implementation` | `review` | `report`** — must match keys under `phases`.
-- **`phases.implementation`**: keep `completedTasks` / `totalTasks` in sync with `tasks` where practical.
-- **`tasks[].type`**: `database` | `backend` | `frontend` | `infra` | `docs` (extend only if needed).
-- **`tasks[].suggestedSkill`**: repo-relative skill id, e.g. `observability`, `nestjs-endpoint`, `prisma-schema`, or `none` if no skill fits.
-- **`tasks[].model`**: **`fast`** (default for low/medium complexity) or **`default`** (high complexity, cross-cutting design, multi-system integration, trade-off review). Target **≥ ~80%** `fast` across tasks.
-- **`tasks[].status`**: `pending` | `in_progress` | `completed` | `failed`.
-- **`tasks[].retries`**: increment on each failed review loop (max **3** per task before `failed`).
-- **`tasks[].dependsOn`**: array of task ids that must be `completed` before this task starts.
-- **`signal`**: optional constant `42` for traceability in examples; may be omitted.
+Optional: `postRunDocumentation` `{ revisedAt, summary }` for honest post-hoc notes **without** faking history.
+
+Do **not** rename PRD phase keys or invent a parallel protocol.
 
 ---
 
-## Phase pipeline (names fixed)
+## Seven phases (PRD 004 — mandatory names)
 
-| Order | `currentPhase` value | Model | Output |
-|------|----------------------|-------|--------|
-| 1 | `analysis` | fast | Requirements, constraints → `phases.analysis.result` |
-| 2 | `codebase` | fast (explore) | Paths, modules, touch list → `phases.codebase.result` |
-| 3 | `planning` | default | Plan → `phases.planning.result` |
-| 4 | `decomposition` | default | Populate `tasks[]` with `model`, `suggestedSkill`, `dependsOn` |
-| 5 | `implementation` | per task | Subagents implement; update each task + implementation counts |
-| 6 | `review` | fast, readonly | Per task or batch: reviewer subagent; on failure re-dispatch implementer with feedback (**≤ 3** `retries` per task) |
-| 7 | `report` | fast | Final summary → `phases.report.result`, optional `report.md`, then set execution `status` |
+| # | PRD name | `currentPhase` | Model (phase-level hint) |
+|---|----------|------------------|---------------------------|
+| 1 | PRD Analysis | `analysis` | fast |
+| 2 | Codebase Scan | `codebase` | fast (explore) |
+| 3 | Planning | `planning` | default |
+| 4 | Decomposition | `decomposition` | default |
+| 5 | Implementation | `implementation` | per **`tasks[].model`** |
+| 6 | Review | `review` | fast, readonly |
+| 7 | Report | `report` | fast |
 
-Phase `status` values: `pending` | `in_progress` | `completed`. When moving forward, set prior phase to `completed`.
+`phases.*.status`: `pending` | `in_progress` | `completed`. **`implementation`** may include **`completedTasks`** / **`totalTasks`** (numbers) as in PRD F2.
 
 ---
 
-## Review loop (F6)
+## Atomic decomposition (PRD F4) — Signal Lab patterns
 
-After implementation (or per task, depending on granularity):
+**Rules:**
 
-1. Run a **readonly** reviewer subagent (prompt template in `COORDINATION.md`).
-2. If **REVIEW_FAILED**: increment `task.retries`, and if `< 3`, re-run implementer with feedback.
-3. If `retries === 3`: set `task.status` to `failed`, continue other tasks.
-4. `failed` tasks do not block unrelated tasks (F7).
+1. Each task: **5–10 minutes**, **one** primary outcome, **`description`** = **1–3 sentences**.
+2. **`complexity`:** `low` | `medium` | `high`. **`dependsOn`:** explicit when order matters.
+3. **No mega-tasks:** do **not** collapse unrelated **database / backend / frontend / docs** (or observability vs UI) into a single `tasks[]` row unless the PRD is trivially single-file doc-only.
+4. **Pattern (not a fixed checklist):** for **scenario** or **API** work, decomposition *often* separates implementation across surfaces — **only as needed**; task **count is not fixed**:
+   - **Codebase inspection** (dedicated **`codebase`** phase and/or a narrow “confirm touchpoints” task when useful).
+   - **Backend DTO / API contract** (validation, OpenAPI, enums).
+   - **Backend service behavior** (business logic, not merged with unrelated UI work).
+   - **Observability** (metrics, structured logs, Sentry — often a good candidate for **`model: default`** when error semantics span layers).
+   - **Frontend UI / types** (TanStack Query, components).
+   - **Documentation** (README, env tables, checklists).
+   - **Readonly review + final report** stay in **`review`** / **`report`** phases (PRD F6–F8) — **do not** collapse them into one giant “implement and self-review” implementation task.
+
+Record rationale in **`phases.decomposition.result`** when the PRD is small but you still split for clarity.
+
+---
+
+## Model selection (PRD F3 — intent, not a quota)
+
+PRD 004: **большинство** work suits a **fast** model; **default** handles harder slices.
+
+**Use `model: fast`** for narrow, mechanical work: DTO/enum tweaks, simple frontend options, README tables, small Swagger annotations, localized readonly checks.
+
+**Use `model: default`** when the task needs **broader reasoning**: architecture choices, **multi-system** integration, **tricky backend behavior**, **observability/error semantics** that span layers, **trade-offs**, or ambiguous debugging.
+
+- Do **not** set every implementation task to **`fast`** if one clearly needs **`default`** (e.g. cross-cutting error and metrics behavior).
+- Do **not** force **80/20** or a **minimum task count** on tiny PRDs — reflect PRD **intent**: small models do **most** implementation tasks; **default** covers the **hard** ones.
+
+**Phase-level:** `planning` and `decomposition` are **default**-biased in PRD 004; keep that.
+
+---
+
+## Skill mapping (PRD F4 — concrete skills only)
+
+Each task **`suggestedSkill`** must be one of:
+
+| Value | When |
+|-------|------|
+| `observability` | Metrics, logs, Sentry, `MetricsService` / `AppLoggerService` / `SentryService` patterns |
+| `nestjs-endpoint` | Nest module/controller/service/DTO/Swagger slices |
+| `prisma-schema` | `schema.prisma`, migrations workflow |
+| `signal-lab-orchestrator` | Rare: edits to **this** orchestrator skill or `/run-prd` docs |
+| `none` | No dedicated skill folder applies — e.g. frontend-only UI (this repo has **no** `frontend` skill; use **`.cursor/rules/frontend-patterns.mdc`**), or tiny docs. **One sentence** in **`phases.decomposition.result`** explains **`none`**.
+
+**Do not** invent skill slugs that are not present under **`.cursor/skills/`**. Custom skill folders here are **`observability`**, **`nestjs-endpoint`**, **`prisma-schema`**, **`signal-lab-orchestrator`** — **no** `frontend` skill.
+
+**Marketplace:** read **`.cursor/marketplace-skills.md`** for optional context; **`.mdc` rules override** on conflict (PRD 003 R5).
+
+---
+
+## Subagent delegation (F5)
+
+The orchestrator **does not** implement multi-step code changes in the main thread. For each delegated step: read **`context.json`** → prompt from **COORDINATION.md** → subagent (e.g. Task tool) → merge results → **`updatedAt`**.
+
+---
+
+## Review (F6) + hook playbooks (PRD 003 R4, manual)
+
+**Code review:** per PRD F6 — reviewer **readonly**; per domain batching or per-task; **≤ 3** **`retries`** per task; **`failed`** tasks stay visible and **do not** block unrelated tasks (F7).
+
+**Hook playbooks:** during **`review`**, **apply relevant** `.cursor/hooks/*.md` as **manual checklists** (they **do not auto-run**). Examples:
+
+- **`after-new-endpoint.md`** — if routes/handlers changed.
+- **`after-prisma-schema-change.md`** — if `prisma/schema.prisma` changed.
+- **`before-commit.md`** — before declaring work merge-ready (advisory).
+
+For each applicable playbook, record **pass** | **fail** | **skipped** (with **reason** if skipped) and **brief evidence** in:
+
+- **`phases.review.result`** (narrative or bullet list), and
+- **`report.md` section `### Hook playbooks`** (table or bullets).
+
+If no playbook applies, state **“no applicable hook playbooks”** in the report.
 
 ---
 
 ## Resume (F7)
 
-If `.execution/<executionId>/context.json` exists and execution `status` is `in_progress`:
+- On restart: **read** **`.execution/{executionId}/context.json`** first.
+- **Do not** re-run phases with **`status: completed`**.
+- **`failed`** tasks remain **`failed`** in JSON and in the **final report** — do not hide them.
+- Continue **unrelated** **`pending`** tasks when **`dependsOn`** allows (F7).
+- **Final report (F8):** summarize **completed**, **failed**, **retries**, **next steps**; include **hook playbook** summary when relevant.
 
-1. Read the file; **do not** clear completed phases or completed tasks.
-2. Continue from `currentPhase`; for `implementation`, pick the next `pending` task whose `dependsOn` are satisfied.
-3. Update `updatedAt` every time you write the file.
+If **`status`** is **`completed`**, start a **new** `executionId` for a new run unless the user explicitly asks to reopen work.
 
 ---
 
 ## Final report (F8)
 
-Produce a **readable** summary for the user (chat + optional `report.md`). Include: execution id, PRD path/text reference, counts of completed/failed tasks and retries, model usage estimate, bullet list of completed work, failed items, and concrete **next steps**. See `EXAMPLE.md` for tone and structure.
+Deliver in chat and optionally **`.execution/{executionId}/report.md`**: same structure spirit as PRD F8 (counts, completed, failed, next steps) + **hook playbooks** subsection when applicable.
 
 ---
 
 ## How to start
 
-1. Determine `executionId`, create `.execution/<executionId>/`.
-2. Write initial `context.json` (`status: in_progress`, all phases `pending` except `analysis` → `in_progress`, `tasks: []`).
-3. Run phase 1 immediately after PRD is known; then proceed phase by phase, updating `context.json` after each subagent returns.
+1. Choose **`executionId`**, create **`.execution/{executionId}/`**.
+2. Write initial **`context.json`**: `status: in_progress`, `currentPhase: analysis`, all **`phases`** keys present, **`tasks: []`** until **`decomposition`** completes.
+3. Run phases **1 → 7**, persisting **`context.json`** after each subagent step.
 
-Do not ask permission between phases unless blocked (missing files, ambiguous security, etc.).
+Ask the human only on blockers (secrets, destructive ops, unclear PRD).

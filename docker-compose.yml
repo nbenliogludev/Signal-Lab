@@ -30,6 +30,7 @@ services:
       LOG_FILE_PATH: ${LOG_FILE_PATH:-/var/log/signal-lab/backend.log}
       SENTRY_DSN: ${SENTRY_DSN:-https://examplePublicKey@o0.ingest.sentry.io/0}
       SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-development}
+      SCENARIO_EXTERNAL_API_URL: ${SCENARIO_EXTERNAL_API_URL:-https://httpbin.org/delay/3}
       NODE_ENV: development
     ports:
       - "${BACKEND_PORT:-3001}:${BACKEND_PORT:-3001}"

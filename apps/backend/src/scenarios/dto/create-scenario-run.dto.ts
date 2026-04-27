@@ -6,6 +6,9 @@ export const scenarioTypes = [
   'validation_error',
   'system_error',
   'slow_request',
+  'database_timeout',
+  'external_api_timeout',
+  'cache_miss_spike',
   'teapot',
 ] as const;
 

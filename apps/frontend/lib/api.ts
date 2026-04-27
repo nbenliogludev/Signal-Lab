@@ -20,6 +20,9 @@ export type ScenarioType =
   | 'validation_error'
   | 'system_error'
   | 'slow_request'
+  | 'database_timeout'
+  | 'external_api_timeout'
+  | 'cache_miss_spike'
   | 'teapot';
 
 export interface RunScenarioInput {

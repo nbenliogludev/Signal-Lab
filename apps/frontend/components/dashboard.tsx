@@ -29,6 +29,9 @@ const scenarioOptions: Array<{ value: RunScenarioInput['type']; label: string }>
   { value: 'validation_error', label: 'validation_error' },
   { value: 'system_error', label: 'system_error' },
   { value: 'slow_request', label: 'slow_request' },
+  { value: 'database_timeout', label: 'database_timeout' },
+  { value: 'external_api_timeout', label: 'external_api_timeout' },
+  { value: 'cache_miss_spike', label: 'cache_miss_spike' },
   { value: 'teapot', label: 'teapot 🫖' },
 ];
 
@@ -214,7 +217,9 @@ export function Dashboard(): React.ReactElement {
           </div>
           <div className="rounded-md border px-3 py-2 sm:col-span-3">
             Sentry: check the configured project dashboard after running
-            <span className="font-mono"> system_error</span>.
+            <span className="font-mono"> system_error</span>,{' '}
+            <span className="font-mono">database_timeout</span>, or{' '}
+            <span className="font-mono">external_api_timeout</span>.
           </div>
         </CardContent>
       </Card>
@@ -290,11 +295,16 @@ function getBadgeVariant(
     return 'default';
   }
 
-  if (status === 'slow' || status === 'teapot') {
+  if (status === 'slow' || status === 'teapot' || status === 'cache_miss_spike') {
     return 'warning';
   }
 
-  if (status === 'error' || status === 'validation_error') {
+  if (
+    status === 'error' ||
+    status === 'validation_error' ||
+    status === 'timeout' ||
+    status === 'external_timeout'
+  ) {
     return 'destructive';
   }
 

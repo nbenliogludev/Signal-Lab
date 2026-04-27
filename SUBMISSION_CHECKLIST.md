@@ -127,10 +127,12 @@ docker compose down
 ## Orchestrator
 
 - **Путь к skill**: `.cursor/skills/signal-lab-orchestrator/SKILL.md`
-- **Путь к context file** (пример): `.execution/<executionId>/context.json` где `executionId` = `YYYY-MM-DD-HH-mm`
+- **Путь к context file** (пример): `.execution/{executionId}/context.json` (= PRD F1 `.execution/<timestamp>/`, то же имя папки) где `executionId` = `YYYY-MM-DD-HH-mm`
 - **Сколько фаз**: 7 (`analysis`, `codebase`, `planning`, `decomposition`, `implementation`, `review`, `report`)
-- **Какие задачи для fast model**: низкая/средняя сложность, атомарные 5–10 мин (см. PRD 004 F3 и `context.json` → `tasks[].model`)
-- **Поддерживает resume**: да *(по спецификации в SKILL.md: чтение существующего `context.json`)*
+- **Какие задачи для fast model**: узкий механический объём (DTO, мелкий UI, доки); **`default`** — архитектура, несколько систем, сложная семантика ошибок/observability (PRD F3; без жёсткой квоты)
+- **Декомпозиция (F4)**: задачи по отдельности (БД / backend / frontend / docs / observability vs UI по необходимости), без одного «сделай всё» mega-task; см. `SKILL.md` (паттерн Signal Lab, не фиксированное число задач)
+- **Review + hook playbooks**: в фазе `review` пройти релевантные `.cursor/hooks/*.md` как чеклисты (вручную); в `report.md` — кратко pass/fail/skipped
+- **Поддерживает resume**: да — сначала читать `context.json`; не повторять `completed`; **`failed`** задачи не скрывать
 
 ---
 

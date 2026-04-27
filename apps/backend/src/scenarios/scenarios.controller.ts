@@ -24,6 +24,11 @@ export class ScenariosController {
   @Post('run')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: ScenarioRunResponseDto })
+  @ApiResponse({
+    status: HttpStatus.GATEWAY_TIMEOUT,
+    description:
+      '504 for database_timeout (DB statement timeout) or external_api_timeout (outbound HTTP client timeout)',
+  })
   @ApiResponse({ status: 418, type: TeapotResponseDto })
   runScenario(
     @Body() dto: CreateScenarioRunDto,

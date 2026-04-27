@@ -1,24 +1,30 @@
 # Orchestrator subagent coordination
 
-The orchestrator **does not** implement tasks in the main thread. For phases **implementation** and **review**, build prompts from these templates and dispatch a subagent (e.g. Task tool). After each subagent returns, **update** `.execution/<executionId>/context.json` on disk.
+The orchestrator **does not** implement tasks in the main thread. For **implementation** and **review**, build prompts from these templates and dispatch a subagent (e.g. Task tool). After each subagent returns, update **`.execution/{executionId}/context.json`**.
 
-Reference rules as **`.cursor/rules/*.mdc`** files (e.g. `stack-constraints.mdc`).
+- **Rules:** `.cursor/rules/*.mdc` (always).
+- **Marketplace (optional):** `.cursor/marketplace-skills.md` — recommended skills; **not** proof of installation; **`.mdc` wins** on conflict.
+- **Hook playbooks (manual):** `.cursor/hooks/*.md` — **not** auto-executed; **apply as checklists** during review and record **pass / fail / skipped** in **`phases.review.result`** and **`report.md`**.
 
 ---
 
 ## 1. Implementer subagent
 
-Use for `database`, `backend`, `frontend`, `infra` tasks.
+Use for `database`, `backend`, `frontend`, `infra`, `docs` tasks.
 
-**Model:** use `task.model` from `context.json` (`fast` or `default`). Subagent runners may map these to their own model slugs.
+**Model:** use **`task.model`** from `context.json` (`fast` or `default`).
+
+After **backend route / Prisma / commit-related** work, the subagent should **remind** the user that **hook playbooks** exist (e.g. `after-new-endpoint.md`, `after-prisma-schema-change.md`) — **manual** follow-up, not automatic.
 
 ```text
 # TASK: [task.title]
 # TASK ID: [task.id]
-# SUGGESTED SKILL: [task.suggestedSkill] — read `.cursor/skills/<skill>/SKILL.md` if not `none`.
+# TYPE: [task.type]
+# MODEL: [task.model]
+# SKILL: [task.suggestedSkill] — if not `none`, read `.cursor/skills/<skill>/SKILL.md` first.
 
 # CONTEXT
-You are an execution subagent under the Signal Lab Orchestrator. Complete exactly ONE atomic task (5–10 min). Do not expand scope.
+You are an execution subagent under the Signal Lab Orchestrator. Complete exactly ONE atomic task (5–10 min). Do not expand scope beyond [task.description].
 
 # RULES (apply relevant .mdc files)
 - Stack: `.cursor/rules/stack-constraints.mdc`
@@ -40,22 +46,40 @@ Reply: IMPLEMENTATION_COMPLETE. <one-line summary>
 
 ## 2. Reviewer subagent (readonly)
 
-**Model:** `fast` (or map from task; must stay **readonly** — no code edits).
+**Model:** `fast` (readonly — **no** file edits).
+
+Group by **domain** (`database`, `backend`, `frontend`) when helpful (PRD F6); **per-task** review is fine for small runs.
+
+**Hook playbooks — apply as checklist (manual, not auto):**
+
+| If this changed | Walk through (checklist only) |
+|-----------------|-------------------------------|
+| Nest routes / handlers / DTOs for new API surface | `.cursor/hooks/after-new-endpoint.md` |
+| `prisma/schema.prisma` | `.cursor/hooks/after-prisma-schema-change.md` |
+| Before declaring merge-ready (optional advisory) | `.cursor/hooks/before-commit.md` |
+
+For **each** applicable playbook, output one line: **`PLAYBOOK: <filename> | PASS`** or **`FAIL`** (with reason) or **`SKIPPED`** (not applicable — why).
 
 ```text
-# REVIEW: [task.title] ([task.id])
+# REVIEW: [task.title] ([task.id])  domain=[task.type]
 
 # CONTEXT
 Read-only QA subagent. Inspect the diff or files touched for this task. Do NOT edit files.
 
-# CHECKLIST
+# CODE CHECKLIST
 1. Stack constraints (`.cursor/rules/stack-constraints.mdc`)
-2. Backend: MetricsService + AppLoggerService + SentryService usage where applicable (`.cursor/rules/observability-conventions.mdc`)
+2. Backend: MetricsService + AppLoggerService + SentryService where applicable (`.cursor/rules/observability-conventions.mdc`)
 3. Frontend: TanStack Query + shadcn patterns (`.cursor/rules/frontend-patterns.mdc`)
 4. Secrets / PII / obvious bugs
 
+# HOOK PLAYBOOKS (manual checklists — report PASS/FAIL/SKIPPED per applicable file)
+- after-new-endpoint.md
+- after-prisma-schema-change.md
+- before-commit.md
+
 # RESPONSE FORMAT
-Either:
+First, one line per applicable playbook: PLAYBOOK: <name> | PASS|FAIL|SKIPPED — <note>
+Then either:
 REVIEW_PASSED.
 or:
 REVIEW_FAILED.
@@ -65,10 +89,10 @@ REVIEW_FAILED.
 
 ---
 
-## 3. Retry loop
+## 3. Retry loop (F6)
 
-On `REVIEW_FAILED`:
+On **`REVIEW_FAILED`**:
 
-1. Increment `tasks[i].retries` in `context.json`.
-2. If `retries < 3`, re-dispatch **implementer** with reviewer reasons appended.
-3. If `retries >= 3`, set `tasks[i].status` to `failed` and continue with the next eligible task.
+1. Increment **`tasks[i].retries`** in `context.json`.
+2. If **`retries < 3`**, re-dispatch **implementer** with reviewer feedback.
+3. If **`retries >= 3`**, set **`tasks[i].status`** to **`failed`** and continue with the next eligible task (**`dependsOn`** satisfied). **Failed** tasks stay visible for **resume** and **report** (F7, F8).

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  GatewayTimeoutException,
   Injectable,
   InternalServerErrorException,
 } from '@nestjs/common';
@@ -39,6 +40,12 @@ export class ScenariosService {
         return this.failValidationScenario(dto, startedAt);
       case 'system_error':
         return this.failSystemScenario(dto, startedAt);
+      case 'database_timeout':
+        return this.failDatabaseTimeoutScenario(dto, startedAt);
+      case 'external_api_timeout':
+        return this.failExternalApiTimeoutScenario(dto, startedAt);
+      case 'cache_miss_spike':
+        return this.completeCacheMissSpikeScenario(dto, startedAt);
       case 'teapot':
         response.status(418);
         return this.steepTeapotScenario(dto, startedAt);
@@ -153,6 +160,197 @@ export class ScenariosService {
     throw new BadRequestException(message);
   }
 
+  private async failExternalApiTimeoutScenario(
+    dto: CreateScenarioRunDto,
+    startedAt: number,
+  ): Promise<never> {
+    const externalUrl =
+      process.env.SCENARIO_EXTERNAL_API_URL ??
+      'https://httpbin.org/delay/3';
+
+    let apiError: Error | null = null;
+
+    try {
+      const controller = new AbortController();
+      const timeoutMs = 120;
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        await fetch(externalUrl, {
+          method: 'GET',
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    } catch (error) {
+      apiError =
+        error instanceof Error ? error : new Error(String(error));
+    }
+
+    if (!apiError) {
+      apiError = new Error(
+        'Expected outbound HTTP call to exceed client timeout.',
+      );
+    }
+
+    const duration = Date.now() - startedAt;
+    const errorMessage = this.truncateForScenarioError(apiError.message);
+    const scenarioRun = await this.prisma.scenarioRun.create({
+      data: {
+        type: dto.type,
+        status: 'external_timeout',
+        duration,
+        error: errorMessage,
+        metadata: {
+          ...(dto.name ? { name: dto.name } : {}),
+          externalUrl: this.truncateForScenarioError(externalUrl, 500),
+          clientTimeoutMs: 120,
+        },
+      },
+    });
+
+    this.logger.error(
+      'Scenario triggered synthetic external API client timeout',
+      'ScenariosService',
+      {
+        scenarioId: scenarioRun.id,
+        scenarioType: dto.type,
+        duration,
+        error: errorMessage,
+      },
+    );
+    this.metrics.recordScenarioRun(dto.type, 'external_timeout', duration);
+    this.sentry.captureException(apiError, {
+      tags: { scenarioType: dto.type },
+      extra: {
+        scenarioId: scenarioRun.id,
+        duration,
+        scenarioName: dto.name ?? null,
+        externalUrl,
+      },
+    });
+
+    throw new GatewayTimeoutException(
+      'Synthetic external API client timeout triggered by external_api_timeout scenario.',
+    );
+  }
+
+  private async completeCacheMissSpikeScenario(
+    dto: CreateScenarioRunDto,
+    startedAt: number,
+  ): Promise<ScenarioRunResponseDto> {
+    const ttlMs = 60_000;
+    const cache = new Map<string, number>();
+    const iterations = 150;
+    let misses = 0;
+
+    for (let i = 0; i < iterations; i++) {
+      const key = `synthetic:${dto.type}:${i}:${startedAt}`;
+      const now = Date.now();
+      const expiresAt = cache.get(key);
+      const hit = expiresAt !== undefined && expiresAt > now;
+
+      if (!hit) {
+        misses++;
+        cache.set(key, now + ttlMs);
+      }
+    }
+
+    const duration = Date.now() - startedAt;
+    const scenarioRun = await this.prisma.scenarioRun.create({
+      data: {
+        type: dto.type,
+        status: 'cache_miss_spike',
+        duration,
+        metadata: {
+          ...(dto.name ? { name: dto.name } : {}),
+          syntheticCacheMisses: misses,
+          iterations,
+          ttlMs,
+        },
+      },
+    });
+
+    this.logger.warn('Synthetic cache miss spike completed', 'ScenariosService', {
+      scenarioId: scenarioRun.id,
+      scenarioType: dto.type,
+      duration,
+      syntheticCacheMisses: misses,
+    });
+    this.metrics.recordScenarioRun(dto.type, 'cache_miss_spike', duration);
+    this.sentry.addBreadcrumb({
+      category: 'scenario.cache',
+      message: 'Synthetic cache miss spike (cold keys)',
+      level: 'warning',
+      data: {
+        scenarioId: scenarioRun.id,
+        scenarioType: dto.type,
+        syntheticCacheMisses: misses,
+      },
+    });
+
+    return ScenarioRunResponseDto.fromScenarioRun(scenarioRun);
+  }
+
+  private async failDatabaseTimeoutScenario(
+    dto: CreateScenarioRunDto,
+    startedAt: number,
+  ): Promise<never> {
+    let timeoutError: Error | null = null;
+
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.$executeRawUnsafe(`SET LOCAL statement_timeout = '50ms'`);
+        await tx.$queryRaw`SELECT pg_sleep(0.25)`;
+      });
+    } catch (error) {
+      timeoutError =
+        error instanceof Error ? error : new Error(String(error));
+    }
+
+    if (!timeoutError) {
+      timeoutError = new Error(
+        'Expected PostgreSQL statement timeout was not triggered.',
+      );
+    }
+
+    const duration = Date.now() - startedAt;
+    const errorMessage = this.truncateForScenarioError(timeoutError.message);
+    const scenarioRun = await this.prisma.scenarioRun.create({
+      data: {
+        type: dto.type,
+        status: 'timeout',
+        duration,
+        error: errorMessage,
+        metadata: this.buildMetadata(dto.name),
+      },
+    });
+
+    this.logger.error(
+      'Scenario triggered synthetic database statement timeout',
+      'ScenariosService',
+      {
+        scenarioId: scenarioRun.id,
+        scenarioType: dto.type,
+        duration,
+        error: errorMessage,
+      },
+    );
+    this.metrics.recordScenarioRun(dto.type, 'timeout', duration);
+    this.sentry.captureException(timeoutError, {
+      tags: { scenarioType: dto.type },
+      extra: {
+        scenarioId: scenarioRun.id,
+        duration,
+        scenarioName: dto.name ?? null,
+      },
+    });
+
+    throw new GatewayTimeoutException(
+      'Synthetic database statement timeout triggered by database_timeout scenario.',
+    );
+  }
+
   private async failSystemScenario(
     dto: CreateScenarioRunDto,
     startedAt: number,
@@ -229,5 +427,13 @@ export class ScenariosService {
     return new Promise((resolve) => {
       setTimeout(resolve, ms);
     });
+  }
+
+  private truncateForScenarioError(message: string, maxLen = 2000): string {
+    if (message.length <= maxLen) {
+      return message;
+    }
+
+    return `${message.slice(0, maxLen)}…`;
   }
 }
