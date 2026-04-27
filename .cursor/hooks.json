@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "hooks": {
+    "afterFileEdit": [
+      {
+        "command": ".cursor/hooks/scripts/after-file-edit.sh"
+      }
+    ],
+    "stop": [
+      {
+        "command": ".cursor/hooks/scripts/final-check.sh",
+        "loop_limit": null
+      }
+    ]
+  }
+}

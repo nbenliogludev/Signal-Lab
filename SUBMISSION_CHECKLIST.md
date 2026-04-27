@@ -6,7 +6,7 @@
 |---|---|
 | **URL** | `https://github.com/nbenliogludev/Signal-Lab.git` |
 | **Branch** | `main` |
-| **Time (approx.)** | ~9 h |
+| **Time (approx.)** | ~10 h |
 
 ---
 
@@ -77,9 +77,11 @@ Files: `.cursor/skills/<name>/SKILL.md`.
 
 Files: `.cursor/commands/<name>.md`.
 
-### Hooks / Playbooks
+### Hooks / playbooks
 
-`.cursor/hooks/*.md` contains manual checklists. There is no `hooks.json`, so these hooks are not auto-run by Cursor.
+**Project-level Cursor hook config:** `.cursor/hooks.json` (see [Cursor Hooks](https://cursor.com/docs/hooks)). **Scripts:** `.cursor/hooks/scripts/` (`after-file-edit.sh`, `final-check.sh`) — stderr reminders only; they do not edit files. **Markdown playbooks:** `.cursor/hooks/*.md` — detailed manual checklists.
+
+Automatic execution depends on your Cursor version and settings; if hooks do not fire, run the scripts manually from the repo root. The playbooks remain the source of truth for full steps.
 
 | # | Hook playbook | What it helps prevent |
 |---|---------------|------------------------|
@@ -142,6 +144,7 @@ Marketplace skills are listed in `.cursor/settings.json`; detailed justification
 - **Scenario tests:** add backend integration tests for `success`, `validation_error`, `system_error`, `slow_request`, and timeout scenarios.
 - **CI checks:** add GitHub Actions for typecheck, lint, `docker compose config`, and basic health verification.
 - **Alert rules:** add Prometheus/Grafana alerts for high error rate, slow request spikes, and missing backend metrics.
+- **Cursor hook automation:** extend the current hook playbooks with real project-level checks for endpoint changes, Prisma schema changes, secrets, and submission readiness.
 
 ---
 
