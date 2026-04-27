@@ -45,8 +45,8 @@
 
 | Signal | How to reproduce | Where to check |
 |--------|------------------|----------------|
-| Prometheus metric | Run `success` or `system_error` from UI (or `POST /api/scenarios/run` per README) | `http://localhost:3001/metrics`, search `scenario_runs_total` |
-| Grafana dashboard | Run several scenarios | `http://localhost:3100` → dashboard `http://localhost:3100/d/signal-lab-observability/signal-lab-observability` (README) |
+| Prometheus metric | Run `success` or `system_error` from UI | `http://localhost:3001/metrics`, search `scenario_runs_total` |
+| Grafana dashboard | Run several scenarios | `http://localhost:3100` → dashboard `http://localhost:3100/d/signal-lab-observability/signal-lab-observability` |
 | Loki log | Run any scenario | Grafana → Explore → Loki → query `{app="signal-lab"}` (README) |
 | Sentry exception | Set real `SENTRY_DSN` in local `.env`, run `system_error` | Sentry project → Issues |
 
