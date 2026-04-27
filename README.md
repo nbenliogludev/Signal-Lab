@@ -286,7 +286,7 @@ The default host port is `5432`, matching the PRD requirement. If your machine a
 POSTGRES_PORT=5433 docker compose up -d
 ```
 
-## Cursor AI Layer (PRD 003)
+## Cursor AI Layer
 
 This project has been transformed into a fully context-aware workspace for the Cursor AI Agent. The AI layer provides guardrails and automated workflows to maintain project standards.
 
