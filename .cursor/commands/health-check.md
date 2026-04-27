@@ -23,7 +23,7 @@ Expected: all 7 services are `Up` (or `running`).
 | `frontend` | `Up`, port 3000 |
 | `prometheus` | `Up`, port 9090 |
 | `grafana` | `Up`, port 3100 |
-| `loki` | `Up`, port 3200 |
+| `loki` | `Up`, host port **3102** → container 3100 (see `docker-compose.yml`) |
 | `promtail` | `Up` |
 
 **If any service is not Up:** run `docker compose logs <service> --tail 50` and report the error.

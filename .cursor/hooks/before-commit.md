@@ -1,10 +1,12 @@
-# Hook: Before Commit
+# Playbook: Before Commit
 
-## When this hook fires
+> **Not a Cursor-automated hook.** Manual playbook only; run these checks yourself or ask the agent to run them before committing. No `hooks.json` ships here.
+
+## When to run this playbook
 Before any `git commit` — especially when staging files that include `.env`, config files, or new service code.
 
 ## Problem this solves
-Secrets committed to git are a critical security incident. Additionally, common mistakes like `console.log` left in production code, or TODO comments that block a feature, get quietly committed and forgotten. This hook catches them before they hit the remote.
+Secrets committed to git are a critical security incident. Additionally, common mistakes like `console.log` left in production code, or TODO comments that block a feature, get quietly committed and forgotten. This playbook catches them before they hit the remote.
 
 ## What to check
 
@@ -67,5 +69,5 @@ Examples: `feat(scenarios): add teapot endpoint`, `fix(metrics): correct counter
 Do NOT commit. Fix the issue first, then re-stage and commit.
 
 ## References
-- Stack rules: `.cursor/rules/stack-constraints.md`
-- Observability: `.cursor/rules/observability-conventions.md`
+- Stack rules: `.cursor/rules/stack-constraints.mdc`
+- Observability: `.cursor/rules/observability-conventions.mdc`

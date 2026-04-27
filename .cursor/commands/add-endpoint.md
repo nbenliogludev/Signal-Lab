@@ -15,8 +15,8 @@ Scaffold a new NestJS endpoint with full observability wiring.
 ### 1. Read context first
 
 - Read `.cursor/skills/nestjs-endpoint/SKILL.md` — full scaffold template and code snippets.
-- Read `.cursor/rules/observability-conventions.md` — metric naming rules and log field requirements.
-- Read `.cursor/rules/stack-constraints.md` — allowed libraries and forbidden alternatives.
+- Read `.cursor/rules/observability-conventions.mdc` — metric naming rules and log field requirements.
+- Read `.cursor/rules/stack-constraints.mdc` — allowed libraries and forbidden alternatives.
 
 ### 2. Create files
 

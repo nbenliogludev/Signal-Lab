@@ -11,7 +11,7 @@ description: Guide for making safe Prisma schema changes — adding models, fiel
 - Adding fields, relations, or indexes to an existing model.
 - Adding or modifying an enum.
 - Renaming a field or table.
-- After this skill, always trigger `.cursor/hooks/after-prisma-schema-change.md`.
+- After this skill, always run the playbook `.cursor/hooks/after-prisma-schema-change.md`.
 
 ---
 
@@ -198,5 +198,5 @@ git add prisma/migrations/
 - [ ] No raw SQL in service code (use Prisma query API)  
 
 ## References
-- `.cursor/rules/prisma-patterns.md` — full Prisma rules and forbidden patterns
-- `.cursor/hooks/after-prisma-schema-change.md` — post-change verification hook
+- `.cursor/rules/prisma-patterns.mdc` — full Prisma rules and forbidden patterns
+- `.cursor/hooks/after-prisma-schema-change.md` — post-change verification playbook

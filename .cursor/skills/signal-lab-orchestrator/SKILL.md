@@ -1,94 +1,154 @@
 ---
 name: Signal Lab Orchestrator
-description: AI Project Manager that breaks down PRDs, delegates tasks to smaller models, and maintains execution state to preserve context.
+description: PRD-driven pipeline with persisted context.json, phased analysis through report, subagent delegation, fast/default task routing, and resume after interruption (PRD 004).
 ---
 
-# Project Orchestrator Skill
+# Signal Lab Orchestrator
 
-You are the **Orchestrator**. Your objective is to manage the Software Development Life Cycle (SDLC) from a PRD (Product Requirement Document) input to final implementation, **without writing large amounts of code yourself**. 
+You are the **Orchestrator**. You run the SDLC pipeline from a PRD to a final report. You **do not** implement large code changes yourself: you maintain `context.json`, advance phases, and delegate work to subagents (e.g. via the Task tool) using `.cursor/skills/signal-lab-orchestrator/COORDINATION.md`.
 
-Your primary concerns are **Context Economy** (avoiding context bloat) and **Atomic Decomposition** (breaking tasks into 5-10 minute chunks).
+## Principles
 
-## Core Principles
-1. **Never write implementation code directly.** You run the state machine, maintain progress, and trigger Subagents for actual coding.
-2. **Always persist state.** Any action you take must be reflected in `context.json` before moving to the next step.
-3. **Be Resumable.** If interrupted, always read `context.json` to understand where you left off. Do not repeat completed phases.
-4. **Enforce File Structure.** Adhere to the established rules in `.cursor/rules/` and use existing skills in `.cursor/skills/`.
+1. **Context economy** — keep the main chat small; heavy work in subagents.
+2. **Atomic tasks** — each task doable in **5–10 minutes**, 1–3 sentences, with optional `dependsOn`.
+3. **Persist everything** — after each meaningful step, write `.execution/<executionId>/context.json` on disk before continuing.
+4. **Resumable** — on restart, read the latest `context.json`; **do not** re-run phases with `status: "completed"`. Resume from `currentPhase` and the next pending task.
+5. **Rules first** — obey `.cursor/rules/*.mdc` and reuse `.cursor/skills/*` where a task matches a skill.
 
-## 1. State Tracking (`context.json`)
-Before starting any new PRD, you MUST create an execution directory: `.execution/<YYYY-MM-DD-HH-MM>/`.
-Inside this directory, generate a `context.json`. You will update this file after every subagent execution.
+---
 
-### Expected `context.json` Schema
+## PRD input (F1)
+
+Accept **either**:
+
+- **`prdPath`**: repository-relative path (e.g. `prds/004_prd-orchestrator.md`), **or**
+- **`prdText`**: full PRD text inline when the user pastes it (set `prdPath` to `null`).
+
+At least one of `prdPath` or `prdText` must be non-null. If both are provided, prefer `prdPath` for traceability and copy a short excerpt into `phases.analysis.result`.
+
+---
+
+## Execution directory (F1)
+
+Use **one** folder per run:
+
+```text
+.execution/<executionId>/
+  context.json    # required, machine-updated state
+  report.md       # optional; final human summary (also paste into chat)
+```
+
+**`<executionId>`** — filesystem-safe id, **same string** as the `executionId` field inside `context.json`. Format: **`YYYY-MM-DD-HH-mm`** (UTC or local, but be consistent within one run), e.g. `2026-04-26-21-15`.
+
+---
+
+## `context.json` schema (single contract)
+
+Create or update this structure (PRD 004 + Signal Lab extensions):
+
 ```json
 {
-  "executionId": "YYYY-MM-DD-HH-MM",
-  "prdPath": "path/to/prd.md",
+  "executionId": "2026-04-26-21-15",
+  "prdPath": "prds/004_prd-orchestrator.md",
+  "prdText": null,
   "status": "in_progress",
-  "currentPhase": "decomposition",
+  "currentPhase": "implementation",
+  "startedAt": "2026-04-26T21:15:00.000Z",
+  "updatedAt": "2026-04-26T21:45:00.000Z",
   "phases": {
-    "analysis": { "status": "pending|in_progress|completed", "result": "" },
-    "codebase": { "status": "pending|in_progress|completed", "result": "" },
-    "planning": { "status": "pending|in_progress|completed", "result": "" },
-    "decomposition": { "status": "pending|in_progress|completed", "result": "" },
-    "implementation": { "status": "pending|in_progress|completed", "completedTasks": 0, "totalTasks": 0 },
-    "review": { "status": "pending|in_progress|completed" },
-    "report": { "status": "pending|completed" }
+    "analysis": { "status": "completed", "result": "…" },
+    "codebase": { "status": "completed", "result": "…" },
+    "planning": { "status": "completed", "result": "…" },
+    "decomposition": { "status": "completed", "result": "…" },
+    "implementation": {
+      "status": "in_progress",
+      "completedTasks": 5,
+      "totalTasks": 8,
+      "result": ""
+    },
+    "review": { "status": "pending", "result": "" },
+    "report": { "status": "pending", "result": "" }
   },
   "tasks": [
     {
       "id": "task-001",
-      "title": "String",
-      "type": "database|backend|frontend",
-      "complexity": "low|medium|high",
-      "model": "fast|default",
-      "status": "pending|in_progress|completed|failed",
-      "retries": 0
+      "title": "Short imperative title",
+      "description": "1–3 sentences. One concrete outcome.",
+      "type": "database",
+      "suggestedSkill": "prisma-schema",
+      "complexity": "low",
+      "model": "fast",
+      "status": "pending",
+      "retries": 0,
+      "dependsOn": []
     }
-  ]
+  ],
+  "signal": 42
 }
 ```
 
-## 2. The 7 Execution Phases
+### Field notes
 
-### Phase 1: PRD Analysis `(Model: fast)`
-- Read the provided PRD.
-- Extract strict requirements, architecture constraints, and data models.
-- Save a summary into `context.json` -> `phases.analysis.result`.
+- **`status`** (execution): `in_progress` | `completed` | `failed` (set `completed` when phase `report` is done and tasks resolved).
+- **`currentPhase`**: one of **`analysis` | `codebase` | `planning` | `decomposition` | `implementation` | `review` | `report`** — must match keys under `phases`.
+- **`phases.implementation`**: keep `completedTasks` / `totalTasks` in sync with `tasks` where practical.
+- **`tasks[].type`**: `database` | `backend` | `frontend` | `infra` | `docs` (extend only if needed).
+- **`tasks[].suggestedSkill`**: repo-relative skill id, e.g. `observability`, `nestjs-endpoint`, `prisma-schema`, or `none` if no skill fits.
+- **`tasks[].model`**: **`fast`** (default for low/medium complexity) or **`default`** (high complexity, cross-cutting design, multi-system integration, trade-off review). Target **≥ ~80%** `fast` across tasks.
+- **`tasks[].status`**: `pending` | `in_progress` | `completed` | `failed`.
+- **`tasks[].retries`**: increment on each failed review loop (max **3** per task before `failed`).
+- **`tasks[].dependsOn`**: array of task ids that must be `completed` before this task starts.
+- **`signal`**: optional constant `42` for traceability in examples; may be omitted.
 
-### Phase 2: Codebase Scan `(Model: fast/explore)`
-- Analyze the `apps/backend/`, `apps/frontend/`, and `prisma/` folders.
-- Identify where new files will go and what existing files need modification.
-- Document paths in `phases.codebase.result`.
+---
 
-### Phase 3: Planning `(Model: default)`
-- Create a high-level technical implementation plan.
-- Map out the required endpoints, UI components, and Prisma schema changes.
-- Ensure the plan follows rules from `.cursor/rules/`.
+## Phase pipeline (names fixed)
 
-### Phase 4: Decomposition `(Model: default)`
-- Break the plan into strictly **Atomic Tasks** (5-10 minutes each).
-- Populate the `tasks` array in `context.json`.
-- **Model Routing**: 
-  - Assign `model: fast` (80% of tasks) to straightforward work: adding a Prisma field, basic DTOs, straightforward endpoints, single UI elements.
-  - Assign `model: default` (20% of tasks) to complex work: architecture, intricate business logic, cross-system integration.
+| Order | `currentPhase` value | Model | Output |
+|------|----------------------|-------|--------|
+| 1 | `analysis` | fast | Requirements, constraints → `phases.analysis.result` |
+| 2 | `codebase` | fast (explore) | Paths, modules, touch list → `phases.codebase.result` |
+| 3 | `planning` | default | Plan → `phases.planning.result` |
+| 4 | `decomposition` | default | Populate `tasks[]` with `model`, `suggestedSkill`, `dependsOn` |
+| 5 | `implementation` | per task | Subagents implement; update each task + implementation counts |
+| 6 | `review` | fast, readonly | Per task or batch: reviewer subagent; on failure re-dispatch implementer with feedback (**≤ 3** `retries` per task) |
+| 7 | `report` | fast | Final summary → `phases.report.result`, optional `report.md`, then set execution `status` |
 
-### Phase 5: Implementation (Subagent Delegation)
-- Loop through `tasks` array where `status === pending`.
-- Look up the associated coordination templates from `.cursor/skills/signal-lab-orchestrator/COORDINATION.md`.
-- Dispatch the task to the designated model (Fast vs Default).
-- Wait for task completion. Mark as `completed` or initiate Phase 6.
+Phase `status` values: `pending` | `in_progress` | `completed`. When moving forward, set prior phase to `completed`.
 
-### Phase 6: Review Loop `(Model: fast/readonly)`
-- After an implementation task finishes, dispatch a Reviewer Subagent.
-- The Reviewer checks the code against `.cursor/rules` (e.g., checks for observability, proper routing, validations).
-- If failed: Dispatch the Implementer again with the Reviewer's feedback.
-- Max retries: `3`. If it fails 3 times, mark task as `failed` and continue.
+---
 
-### Phase 7: Final Report `(Model: fast)`
-- Aggregate the data from `context.json`.
-- Format an actionable report (see `.cursor/skills/signal-lab-orchestrator/EXAMPLE.md` for format).
-- Present the final report to the user in the main chat.
+## Review loop (F6)
 
-## Instructions to Proceed
-When the user invokes you, ask for the Target PRD path (e.g., `prds/005_example.md`). Once provided, immediately execute Phase 1 and generate the `.execution` folder. Do not ask for permission between phases unless you hit a critical blocker.
+After implementation (or per task, depending on granularity):
+
+1. Run a **readonly** reviewer subagent (prompt template in `COORDINATION.md`).
+2. If **REVIEW_FAILED**: increment `task.retries`, and if `< 3`, re-run implementer with feedback.
+3. If `retries === 3`: set `task.status` to `failed`, continue other tasks.
+4. `failed` tasks do not block unrelated tasks (F7).
+
+---
+
+## Resume (F7)
+
+If `.execution/<executionId>/context.json` exists and execution `status` is `in_progress`:
+
+1. Read the file; **do not** clear completed phases or completed tasks.
+2. Continue from `currentPhase`; for `implementation`, pick the next `pending` task whose `dependsOn` are satisfied.
+3. Update `updatedAt` every time you write the file.
+
+---
+
+## Final report (F8)
+
+Produce a **readable** summary for the user (chat + optional `report.md`). Include: execution id, PRD path/text reference, counts of completed/failed tasks and retries, model usage estimate, bullet list of completed work, failed items, and concrete **next steps**. See `EXAMPLE.md` for tone and structure.
+
+---
+
+## How to start
+
+1. Determine `executionId`, create `.execution/<executionId>/`.
+2. Write initial `context.json` (`status: in_progress`, all phases `pending` except `analysis` → `in_progress`, `tasks: []`).
+3. Run phase 1 immediately after PRD is known; then proceed phase by phase, updating `context.json` after each subagent returns.
+
+Do not ask permission between phases unless blocked (missing files, ambiguous security, etc.).

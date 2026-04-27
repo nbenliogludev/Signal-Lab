@@ -1,51 +1,37 @@
-# Orchestrator Examples & Reporting
+# Orchestrator examples
 
-This document provides examples of how the Orchestrator interacts with the user in the main chat.
+Paths use **`executionId`** = folder name under `.execution/`, matching `context.json` → `executionId` (format `YYYY-MM-DD-HH-mm`).
 
-## Example 1: Resuming an Interrupted Execution
-
-If the Orchestrator stops or crashes in the middle of a PRD, upon reactivation, it should read `context.json` and output:
+## Resume
 
 ```text
-Found existing execution context: .execution/2026-04-08-14-30/context.json
-Status: in_progress
-Current Phase: Implementation
-
-Resuming...
-Task 4/8: "Create DTOs for Scenario Submission" (Status: pending).
-Dispatching task to backend implementer (fast model)...
+Found .execution/2026-04-26-21-15/context.json
+Execution status: in_progress
+currentPhase: implementation
+Resuming: task task-004 (pending), dependencies satisfied.
+Dispatching implementer with model: fast …
 ```
 
-## Example 2: Final Report Generation (Phase 7)
+## Final report (phase `report`)
 
-Once all tasks are either `completed` or `failed`, the Orchestrator must generate a final markdown report for the user. Do not dump the raw JSON. Produce a clean analysis.
+After all tasks are `completed` or `failed`, write `phases.report.result` and optionally `.execution/2026-04-26-21-15/report.md`. Example body:
 
-**Format:**
 ```markdown
 # Signal Lab PRD Execution — Complete
 
-**Execution ID:** 2026-04-08-14-30
-**Target PRD:** prds/002_prd-observability-demo.md
-**Duration:** ~25 min (Approximated)
+**Execution ID:** 2026-04-26-21-15
+**PRD:** prds/004_prd-orchestrator.md
 
-### Execution Summary
-- **Tasks:** 12 completed, 1 failed, 2 retries
-- **Model Usage:** 10 fast, 3 default
+### Summary
+- Tasks: 12 completed, 1 failed, 2 review retries
+- Model usage (approx.): 10 fast, 3 default
 
-### ✅ Completed Tasks
-- ✓ Prisma schema + migration
-- ✓ ScenarioService + Controller
-- ✓ Prometheus metrics
-- ✓ Structured logging
-- ✓ Sentry integration
-- ✓ Frontend scenario form
-- ✓ Run history list
-- ✓ Grafana dashboard
+### Completed
+- …
 
-### ❌ Failed Tasks
-- ✗ Loki log panel (Review repeatedly failed: "Unable to query Loki endpoint locally")
+### Failed
+- …
 
-### ⏭️ Next Steps (Manual Intervention Required)
-- Check the docker compose network configuration for Loki.
-- Run the `@before-commit` hook to prepare the branch for merge.
+### Next steps
+- …
 ```

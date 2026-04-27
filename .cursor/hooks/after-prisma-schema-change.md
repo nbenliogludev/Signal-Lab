@@ -1,10 +1,12 @@
-# Hook: After Prisma Schema Change
+# Playbook: After Prisma Schema Change
 
-## When this hook fires
+> **Not a Cursor-automated hook.** Manual playbook only; no `hooks.json` in this repo.
+
+## When to run this playbook
 After any edit to `prisma/schema.prisma` — new model, new field, changed relation, changed enum.
 
 ## Problem this solves
-The most common Prisma mistake: editing `schema.prisma` but forgetting to run `migrate dev` and `generate`. The result is a runtime crash or stale TypeScript types that silently lie about the DB shape. This hook ensures the migration + client regeneration cycle is never skipped.
+The most common Prisma mistake: editing `schema.prisma` but forgetting to run `migrate dev` and `generate`. The result is a runtime crash or stale TypeScript types that silently lie about the DB shape. This playbook ensures the migration + client regeneration cycle is never skipped.
 
 ## What to do (in order)
 
@@ -53,4 +55,4 @@ The new migration directory must be staged. **Never gitignore migration files.**
 - [ ] Migration file staged in git
 
 ## References
-- Full Prisma rules: `.cursor/rules/prisma-patterns.md`
+- Full Prisma rules: `.cursor/rules/prisma-patterns.mdc`

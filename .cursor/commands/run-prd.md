@@ -1,87 +1,62 @@
 # /run-prd
 
-Execute a PRD through the Signal Lab orchestrator protocol.
+Run a PRD through the **Signal Lab orchestrator** (PRD 004). The **only** execution contract is defined in `.cursor/skills/signal-lab-orchestrator/SKILL.md` — this command is a thin runner for the same agent behavior.
 
 ## Usage
 
+```text
+/run-prd <path-to-prd-file>
 ```
-/run-prd <path-to-prd>
-```
+
+or paste PRD text in the same message and invoke `/run-prd` without a path (the agent must set `prdText` in `context.json` and `prdPath: null`).
 
 **Example:** `/run-prd prds/004_prd-orchestrator.md`
 
-## What to do
+## Pre-flight
 
-### 0. Pre-flight
+1. Read `.cursor/skills/signal-lab-orchestrator/SKILL.md` (phases, `context.json`, resume).
+2. Read `.cursor/skills/signal-lab-orchestrator/COORDINATION.md` (subagent templates).
+3. Read `.cursor/rules/stack-constraints.mdc` for allowed libraries.
 
-1. Read `.cursor/skills/signal-lab-orchestrator/SKILL.md` for the full orchestrator protocol and phase definitions.
-2. Read `.cursor/rules/stack-constraints.md` to know what libraries are allowed.
-3. Check the current branch: confirm you are **not** on `main` before making any changes.
+## Execution directory
 
-### 1. Load and analyse the PRD
+Create:
 
-Read the PRD from the specified path. Extract:
-
-- Goal and acceptance criteria
-- List of functional requirements (F-numbers)
-- Any explicit file/API contracts mentioned
-
-### 2. Create execution directory
-
-```
-.execution/<YYYY-MM-DDTHH-MM-SS>/
+```text
+.execution/<executionId>/
+  context.json
 ```
 
-Create `context.json` with:
+- **`<executionId>`**: `YYYY-MM-DD-HH-mm` (same value as JSON field `executionId`).
+- Initial `context.json` must match the schema in the orchestrator skill (including `executionId`, `prdPath` and/or `prdText`, `phases`, `tasks`, per-task `model`, `suggestedSkill`, `retries`, `dependsOn`).
 
-```json
-{
-  "prd": "<path>",
-  "startedAt": "<ISO timestamp>",
-  "currentPhase": 1,
-  "phases": {}
-}
-```
+## Phases (names are fixed)
 
-### 3. Run the 7 phases
+| Phase key (`currentPhase`) | PRD 004 name        | Model hint   |
+|----------------------------|-------------------|--------------|
+| `analysis`                 | PRD analysis      | fast         |
+| `codebase`                 | Codebase scan     | fast         |
+| `planning`                 | Planning          | default      |
+| `decomposition`          | Decomposition     | default      |
+| `implementation`         | Implementation    | per-task     |
+| `review`                 | Review              | fast, readonly |
+| `report`                 | Report              | fast         |
 
-| Phase | Name | Model hint | Output |
-|-------|------|-----------|--------|
-| 1 | PRD Analysis | fast | Requirements list, open questions |
-| 2 | Codebase Scan | fast | Affected files and modules |
-| 3 | Planning | default | Architecture decisions, file plan |
-| 4 | Decomposition | default | Ordered task list with dependencies |
-| 5 | Implementation | fast 80% / default 20% | Working code committed to branch |
-| 6 | Review | fast, read-only | Checklist: observability, types, tests |
-| 7 | Report | fast | Summary of what was built, what is left |
+After each phase completes, persist updates to `context.json` (`updatedAt`, phase `status` / `result`, `currentPhase`).
 
-After each phase, update `context.json`:
+## Implementation constraints
 
-```json
-{
-  "phases": {
-    "1": { "completedAt": "...", "output": "..." }
-  },
-  "currentPhase": 2
-}
-```
+- Prefer a feature branch (e.g. `feature/prd-…`) instead of committing directly to `main` when the user expects git history.
+- Follow all `.cursor/rules/*.mdc` files.
+- For backend routes, use `/check-obs` expectations before marking implementation done.
+- Run `npm run typecheck` (or project-equivalent) in `apps/backend` and `apps/frontend` before declaring the run complete when code changed.
 
-### 4. Implementation constraints (Phase 5)
+## Final output
 
-- Create a new branch `feature/prd-00N-<slug>` from `main`, never commit directly to `main`.
-- Follow all rules in `.cursor/rules/`.
-- Every new endpoint must pass `/check-obs` before the phase is marked done.
-- Run `npm run typecheck` in both `apps/backend` and `apps/frontend` before finalising.
-
-### 5. Output final report
-
-After Phase 7 write `.execution/<timestamp>/report.md` containing:
-
-- Acceptance criteria status (✅ / ❌ per item)
-- Files created / modified
-- Manual verification steps for the interviewer
-- Any remaining gaps or known issues
+1. Set `phases.report.status` to `completed` and fill `phases.report.result`.
+2. Optionally write `.execution/<executionId>/report.md` with the same content as the user-facing summary.
+3. Set top-level `status` to `completed` (or `failed` if the PRD could not be finished).
 
 ## Resume
 
-If `.execution/<timestamp>/context.json` already exists for this PRD and `currentPhase` > 1, resume from `currentPhase`. Completed phases (present in `phases` map) are skipped automatically.
+If `.execution/<executionId>/context.json` already exists for this run and `status` is `in_progress`, **read it** and continue from `currentPhase` and the next eligible task. **Skip** phases (and tasks) already marked `completed`. Do not recreate the directory for the same `executionId`.
